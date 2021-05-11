@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>$title$ - $site-title$</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <link rel="stylesheet" href="/style.css" />
+        $if(mathjax)$
+        <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        $endif$
+        <script src="/asset/plyr.js"></script>
+        <link rel="stylesheet" href="/asset/plyr.css" />
+    </head>
+    <body>
+        <header>
+            <h1><a href="/index.html">$site-title$</a></h1>
+        </header>
+        <main>
+            $body$
+        </main>
+        <footer>
+            <p>
+                <span class="metadata">
+                    <a href="https://twitter.com/ricotie">twitter</a>
+                    /
+                    <a href="https://github.com/vekatze">github</a>
+                    /
+                    <a href="https://github.com/vekatze">email</a>
+                </span>
+            </p>
+        </footer>
+        $if(audio)$
+        <script src="/main.js"></script>
+        $endif$
+    </body>
+</html>

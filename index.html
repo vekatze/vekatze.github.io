@@ -1,0 +1,11 @@
+---
+title: 記事一覧
+---
+<ul>
+    $for(post)$
+    <li>
+        <span class="metadata">$published$ $if(audio)$ ♪ $endif$</span>
+        <a href="$url$">$title$</a>
+    </li>
+    $endfor$
+</ul>

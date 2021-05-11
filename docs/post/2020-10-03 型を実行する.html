@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>型を実行する - 以析比域</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <link rel="stylesheet" href="/style.css" />
+        
+        <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        
+        <script src="/asset/plyr.js"></script>
+        <link rel="stylesheet" href="/asset/plyr.css" />
+    </head>
+    <body>
+        <header>
+            <h1><a href="/index.html">以析比域</a></h1>
+        </header>
+        <main>
+            <header>
+    <h1>型を実行する</h1>
+    
+    <span class="metadata">2020-10-03</span>
+    
+</header>
+
+<p>もともとは次をすべてみたすような言語を探していた：</p>
+<ol>
+<li>十分に強い型システムをもっている<br />
+</li>
+<li>普通のλ計算でプログラムを書くことができる<br />
+</li>
+<li>メモリ管理が静的である</li>
+</ol>
+<p>まあ我ながらワガママとしか言いようがない。これらすべてをクリアするものはなかなか見つからない。特に3つ目がきつい。最初の2つの条件だけなら単にGCと手をつなげばハッピーエンドであり、実際OCamlとかHaskellとかF#とかで私はたいへん満足なのだが、ここに最後の条件を入れた途端に話はぐっとむずかしくなる。</p>
+<p>その後、なんだかんだで<a href="https://github.com/u2zv1wx/neut">結局自分で上記のような言語を書くに至った</a>。依存型理論ベースであって、リソース管理のための追加のアノテーションが存在せず、かつメモリ管理が静的であるような言語である。で、実現にあたり、最後の条件をクリアするために考えついた手法がたぶん結構おもしろく、本稿はそれを紹介するものである。</p>
+<p>オチを先取りして言うなら、当該の手法は「型を実行する」ような代物になっている。もうすこし正確には、型を、その型をもつ値を複製・破棄するための関数へと変換するようなものとなっている。私はGCもregion-basedな路線もあるいはすべてを手でやる路線もそれぞれに好きなんだけど、それはそれとして、今回の路線はひとつの可能性としてなかなかおもしろいものになったんじゃないかと思う。</p>
+<p>あらかじめいくつか断っておく。</p>
+<ul>
+<li>本稿に安全性の証明のたぐいは一切含まれていない。ズコーッという感じだが、気にせず話を続けると、無論私もそうした証明が添えられていたほうが100倍よいと思ってはいる。とはいえ時間的資源は有限であり、この省除はあれこれを天秤にかけた結果である。あくまでこういう手法が可能っぽいですよ〜という示唆程度のものとして、話半分に受け取ってもらえればと思う。<br />
+</li>
+<li>動機や背景などについての記述は煩雑を嫌って補遺に回した。つまり本論のほうは手法の要点を最速で書き下すことに焦点をしぼったものとなっている。裏を返して言えば、手法のおもしろみが補遺ありきのものとなっていることを了解されたい。<br />
+</li>
+<li>本稿はOCamlやHaskellなどの経験があれば一通り読めるようにしたつもりで、読めないようであれば私が悪い。<br />
+</li>
+</ul>
+<p>前置きが長くなった。いいかげん本論に入ることにする。話は所望の性質をもった小さな言語について考えるところから始まる。</p>
+<h2 data-toc=":include siblings :depth 2 :ignore (this)" id="toc">目次</h2>
+<div class="CONTENTS drawer">
+<ol>
+<li><a href="#線形性の力を借りる">線形性の力を借りる</a>
+<ol>
+<li><a href="#変数がちょうど1回だけ使用されるような言語">変数がちょうど1回だけ使用されるような言語</a><br />
+</li>
+<li><a href="#線形性のもとでのリソース管理">線形性のもとでのリソース管理</a><br />
+</li>
+<li><a href="#非線形性を密輸入しよう">非線形性を密輸入しよう</a><br />
+</li>
+</ol></li>
+<li><a href="#型を実行する">型を実行する</a>
+<ol>
+<li><a href="#リソース管理の語彙を対象言語の内部に見る">リソース管理の語彙を対象言語の内部に見る</a><br />
+</li>
+<li><a href="#型がより具体的にどう変換されるか">型がより具体的にどう変換されるか</a><br />
+</li>
+<li><a href="#変換された型がどう利用されるか">変換された型がどう利用されるか</a><br />
+</li>
+<li><a href="#本論のおわりに">本論のおわりに</a><br />
+</li>
+</ol></li>
+<li><a href="#補遺">補遺</a>
+<ol>
+<li><a href="#自然演繹にすごい勢いで入門する">自然演繹にすごい勢いで入門する</a><br />
+</li>
+<li><a href="#証明論からくる動機">証明論からくる動機</a><br />
+</li>
+<li><a href="#局所完全性の計算論的意義">局所完全性の計算論的意義</a><br />
+</li>
+<li><a href="#複製破棄によるリソース管理を基礎づける">複製・破棄によるリソース管理を基礎づける</a><br />
+</li>
+<li><a href="#まともな性能を期待できるのか">まともな性能を期待できるのか</a><br />
+</li>
+<li><a href="#その他のあれこれ">その他のあれこれ</a><br />
+</li>
+</ol></li>
+<li><a href="#跋">跋</a></li>
+</ol>
+</div>
+<h2>線形性の力を借りる</h2>
+<h3>変数がちょうど1回だけ使用されるような言語</h3>
+<p>フル装備の言語のまえに簡単な部分言語について調べてみるというのは素直な発想だと言ってよいと思う。本稿もその方針でいく。</p>
+<p>「簡単な部分言語」と一口に言っても、制限のしかたにはいろいろある。ここでは変数の使われ方に制限を入れる。より具体的には、OCamlとかHaskellのような言語であって、定義された変数がすべてちょうど1回だけ使用されるようなものを考える。こうした変数の使用はしばしば「線形である」といわれる<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>。</p>
+<p>この言語を L<sup>-</sup> とよぶことにしよう。たとえば次の疑似コードは言語 L<sup>-</sup> においてコンパイルを通過するべきものである：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>let x := 100 in</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>let y := 1 in</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>add x y</span></code></pre></div>
+<p>変数 <code>x</code>, <code>y</code> がどちらも線形に使用されていることに注目してほしい。他方で次の疑似コードはコンパイルエラーとなるべきものである：</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>let x := 100 in</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>add x x</span></code></pre></div>
+<p>というのは、変数 <code>x</code> が <code>add x x</code> において2回使用されているからである。少なすぎてもだめで、たとえば</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>let x := 100 in</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>10</span></code></pre></div>
+<p>は、 <code>x</code> が1回も使用されていないのでコンパイルエラーとなる。あるいは、 <code>increment</code> という関数がすでにどこかで定義されているとして、次の疑似コードもコンパイルエラーとなるべきものである：</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>let x := 100 in</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>let y := increment x in</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>add x y</span></code></pre></div>
+<p>こちらでも変数 <code>x</code> が <code>increment x</code> と <code>add x y</code> において計2回使用されているのがわかると思う。いわば、 <code>increment x</code> において <code>x</code> はすでに消費されてしまっており、それゆえ <code>add x y</code> の時点ではもう <code>x</code> は利用できない、という具合である。</p>
+<p>いちおう一言添えておくと、もちろんすべての変数に線形性を課すなんてのは制限として相当キツい部類のもので、実際の言語にこんな制約があればおよそ現実的なプログラムなど書けたものではない。が、我々はすぐあとでこの制約がどのようにして回避されるかを見る。というわけで表現能力の問題については特に心配はいらない。</p>
+<h3>線形性のもとでのリソース管理</h3>
+<p>ここでは言語 L<sup>-</sup> の構成要素は変数とλ抽象と関数適用と <code>let</code> のみであるとする。つまり、 <code>[1, 2, 3]</code> のような配列であるとか、あるいは上で見たような <code>100</code> のような整数であるとかは言語に含まれないものとしていったん無視しておく。というのは、これらを言語に追加するにしても、結局λ抽象について以下で述べることが実質的にそのまま機能するからである。ようは話が長くなるだけだからカットする。</p>
+<p>このような言語 L<sup>-</sup> において静的なリソース管理をおこなうことを考えてみる。つまりコンパイル時の情報だけでメモリをうまく割り当てることを考えてみる。すると、次のような自明な解決があることがわかる。</p>
+<p>まず、メモリを割り当てるのは、λ抽象を処理するタイミングとし、またこのときだけとする。たとえば、</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>let f := λ y. (なんかの計算) in</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>(つづきの計算)</span></code></pre></div>
+<p>のようなコードがあったとして、このコードの挙動は、</p>
+<ol>
+<li><code>λ y. (なんかの計算)</code> を表現するためのメモリ領域を割り当て、<br />
+</li>
+<li>その領域にλ抽象の情報を書き込み（これは <code>(info-1, ..., info-n)</code> のような組になり、クロージャともよばれる）、<br />
+</li>
+<li>その領域へのポインタを <code>f</code> に束縛して、<br />
+</li>
+<li><code>(つづきの計算)</code> を実行する<br />
+</li>
+</ol>
+<p>という具合のものになる。この部分の処理については、言語が線形であろうがなかろうがたいした違いはない。メモリ領域を割り当てないことにはλ抽象の情報をメモリ上で表現できないのだから、当たり前といえば当たり前である。</p>
+<p>他方、メモリを解放するのは、関数適用を処理するタイミングとし、またこのときだけとする。たとえば、</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(なんかの計算) in</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>f a</span></code></pre></div>
+<p>のようなコードがあったとして、このコードの挙動は、</p>
+<ol>
+<li><code>(なんかの計算)</code> をおこない、<br />
+</li>
+<li>関数 <code>f</code> に束縛されているはずのλ抽象の情報 <code>info-1</code>, …, <code>info-n</code> をメモリ領域から取り出し、<br />
+</li>
+<li>関数 <code>f</code> の外側の <code>(info-1, ..., info-n)</code> を解放し、<br />
+</li>
+<li>とりだしたλ抽象の情報のもと、 <code>a</code> を引数として目的の関数を呼び出す<br />
+</li>
+</ol>
+<p>という具合のものになる。</p>
+<p>上記のように定めたメモリ解放は安全で、かつすべてのリソースを解放するのだが、これは言語の線形性からしたがう。すなわち、まず、線形性によって、λ抽象はすべてちょうど1回だけ使用される。これはもちろん、λ抽象がすべて1回以下使用され、かつ1回以上使用されるということである。1回以下使用（適用）されるのだから、任意のλ抽象に対して施されうる解放は1回以下である。つまり性質「解放したものを繰り返し解放してしまうことがない」が保証される。また、1回以上使用（適用）されるのだから、任意のλ抽象に対して施されうる解放は1回以上である。つまり性質「割り当てたものは必ず解放される」が保証される。</p>
+<p>というわけで、言語 L<sup>-</sup> においては上記の解釈によってメモリが安全かつ確実に解放される。静的なメモリ管理が実現できる。つまりは所望の性質がタダで得られる。次節では、このありがたい性質を保ちながら言語 L<sup>-</sup> の表現能力を強めることを考える。つまり線形性に対する迂回路を用意することを目指す。</p>
+<h3>非線形性を密輸入しよう</h3>
+<p>迂回するには抜け道があればよい。任意の型 <code>A</code> について、次のような定数を言語 L<sup>-</sup> に追加してみる：</p>
+<ul>
+<li><code>copy_A : A -&gt; A * A</code><br />
+</li>
+<li><code>discard_A : A -&gt; top</code><br />
+</li>
+</ul>
+<p>ここで <code>A * A</code> は2個の <code>A</code> 型の値からなるペアの型であり、また <code>top</code> というのはいわゆるunit型である。少し考えてみれば、これらがあれば変数の数についての制約は迂回できることがわかる。たとえば次のような違法なコードをとってみる：</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>let x := 1 in</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>add x (add x x)</span></code></pre></div>
+<p>上記のコードは、上の定数を用いて、計算結果を保ちながら次のように書き換えてやることができる：</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>let x := 1 in</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>let (x1, tmp) := copy_int x in</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>let (x2, x3) := copy_int tmp in</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>let (add1, add2) := copy_(int-&gt;int-&gt;int) add in</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>add1 x1 (add2 x2 x3)</span></code></pre></div>
+<p>そしてこのコードは言語 L<sup>-</sup> のものとして合法である。あるいは</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>let x := 100 in</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>10</span></code></pre></div>
+<p>という違法なコードについても同様で、こちらは</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>let x := 100 in</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>let () := discard_int x in</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>10</span></code></pre></div>
+<p>とすれば済む。どちらの例においても、 <code>copy_int</code> および <code>discard_int</code> によって変数の使用が線形になるよううまく帳尻が合わせられていることに注目されたい。一般に、 <code>A</code> 型の変数 <code>x</code> がn回使用されているとして、</p>
+<ul>
+<li>n &lt; 1ならば <code>discard_A</code> を用いることで <code>x</code> の使用を線形にすることができる。<br />
+</li>
+<li>n = 1ならば <code>x</code> の使用はすでに線形である。<br />
+</li>
+<li>n &gt; 1ならば <code>copy_A</code> を用いることで <code>x</code> の使用を線形にすることができる。</li>
+</ul>
+<p>それゆえ、線型性によって損なわれていた表現能力はこれらの定数によってとりもどされる。そして、ベースの言語には触れていないのだから、リソースについて奇妙な挙動を示しているのはこれらの定数だけである。というわけで、あとはこれらの定数の中身が具体的にどのようなものになるべきであるかを考えてやればよい<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>。</p>
+<h2>型を実行する</h2>
+<p>冒頭で先取りして述べた通り、リソース管理のための情報はすでに型のうちにある。本節では、まず型をリソース管理に利用するにあたってのアイデアを示し、次にそのアイデアのもとでより具体的にさまざまな型がどのように上記の <code>copy_A</code> / <code>discard_A</code> を実現するかを見て、最後に型の変換結果がどのように利用されるかを見る。</p>
+<h3>リソース管理の語彙を対象言語の内部に見る</h3>
+<p>コアとなるアイデアを例で示す。いま、 <code class="verbatim">e</code> という <code class="verbatim">A * B</code> 型のtermがあるとする。このときわれわれは、 <code class="verbatim">e</code> が具体的にどのような内部構造をもっているかを知ることなく、その型情報のみによって、 <code class="verbatim">e</code> を次のように展開することができる：</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>let (x, y) := e in (x, y)</span></code></pre></div>
+<p>こうした展開はしばしばη展開とよばれるもので、 <code class="verbatim">e</code> にあたるtermが副作用をもたないかぎりにおいて、termの意味を保つ：</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>   let (x, y) := (&quot;foo&quot;, (3, true)) in (x, y)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>~&gt; (&quot;foo&quot;, (3, true))</span></code></pre></div>
+<p>さて、ポイントは、 <code class="verbatim">e</code> がどんなものであるかによらず、型の情報だけからこの展開をおこなうことができるという点である。これはすなわち、η展開の操作をひとつの関数として書きうるということでもある。つまり次のような関数を <code class="verbatim">A * B</code> に対応するη展開としてとることができる：</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>λ z.</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  let (x, y) := z in</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  (x, y)</span></code></pre></div>
+<p>この関数のなにが嬉しいかって、 <code>e</code> の中身であるところの <code>x</code> および <code>y</code> が変数として参照可能になるところ、つまり <code>e</code> の中身をたどれるようになるところである。いま、このη展開を参考に、型に対してその型をもつtermの中身をたどる関数を対応づけるような変換が仮に定義できるとして、それを <code>Expand(_)</code> と書くことにすると、 <code>Expand(A * B)</code> は、</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>λ z.</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  let (x, y) := z in</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  let x&#39; := Expand(A) x in</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  let y&#39; := Expand(B) y in</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  (x&#39;, y&#39;)</span></code></pre></div>
+<p>のようになるだろう。他の型に対してもこの <code>Expand(_)</code> を具体的に定めてゆけばtermを再帰的にたどれそうである。</p>
+<p>もちろん、 <code>Expand(_)</code> が定義できたとしても、それだけではη展開をterm全体にいわば伝播させることが可能になっただけで、リソースの複製・破棄についての議論はまだ絡んでこない。だがそれらは実は既にほとんど解決ずみである。実際たとえば、すべての型に対して複製関数を対応付けるような変換が仮に定義できるとして、それを <code>Copy(_)</code> と書くとき、 <code>Copy(A * B)</code> は</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>λ z.</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  let (x, y) := z in</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  let (x1, x2) := Copy(A) x in</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  let (y1, y2) := Copy(B) y in</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  ((x1, y1), (x2, y2))</span></code></pre></div>
+<p>のように定めてやれる。これはたしかに <code>A * B -&gt; (A * B) * (A * B)</code> という型をもっている。あるいはまた、すべての型に対して破棄関数を対応づけるような変換が定義できるとして、それを <code>Discard(_)</code> と書くとき、 <code>Discard(A * B)</code> は、</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>λ z.</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  let (x, y) := z in</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  let () := Discard(A) x in</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  let () := Discard(B) y in</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  ()</span></code></pre></div>
+<p>としてやればよい。これもたしかに <code>A * B -&gt; top</code> という型をもっている。</p>
+<p>ようするに、 <code>copy_A</code> および <code>discard_A</code> は、展開を関数として再帰的に表現したものを「n乗」へと拡張することで実現できそうに見える、というのがコアのアイデアである。型に対してこのような計算論的解釈を与えられるのではないか、という話である。そしてこのように定数を定義できるのであれば、型 <code>A</code> を定数のペア <code>(copy_A, discard_A)</code> へと変換してやれば、対象言語のほうでこのペアから必要なほうを適宜とりだして使用することで前節で見たような帳尻合わせが可能になるのではないか、という話である。そしてそれを実装しましたよ（証明はないけど！）、というのが冒頭に示したリポジトリである。</p>
+<p>なお実際には、型 <code>A</code> は、 <code>copy_A</code> と <code>discard_A</code> のペアではなく、次のような2引数関数 <code>exp_A</code> へと変換されることになる：</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>λ flag z.</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  if flag</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  then discard_A z</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  else copy_A z</span></code></pre></div>
+<p>この <code>exp_A</code> は次のように使用される：</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>-- x : Aをdiscardしたいとき</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>let () := exp_A true x in</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>(...)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>-- x : Aをcopyしたいとき</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>let (x1, x2) := exp_A false x in</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>(...)</span></code></pre></div>
+<p>これは表現能力云々の話ではなく、純粋に実装上の最適化である。これによって、型は（ペアではなく）閉じた静的な関数へと変換されることになる。そして閉じた関数はLLVMのレベルではただの関数ポインタとして、つまり普通の即値と同じように複製・破棄できるから、結局、型の変換結果はふつうの即値と同じように複製・破棄できるということになる。ペアで実装していたならば発生していたであろう面倒なallocation/freeの処理をパスすることができ、かつ実行効率の向上も期待できるという具合であり、それゆえ実装ではこちらの方針をとることにした。</p>
+<h3>型がより具体的にどう変換されるか</h3>
+<p>ここでは複製・破棄の関数がより具体的にいろいろな型に対してどのように定められるかを見てみる。</p>
+<h4>即値</h4>
+<p><code>int</code> のような、即値の型について。これについては次のようにして <code>copy</code> と <code>discard</code> を定めてやればよい：</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>let copy_int :=</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  λ x. (x, x)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>let discard_int :=</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  λ x. ()</span></code></pre></div>
+<p><code>copy_int</code>, <code>discard_int</code> が受けとる引数は即値であり、それゆえ特にメモリにふれることなく複製・破棄できる。ゆえに非線形に複製・破棄してやればよい。これらの関数におけるメモリにかかわる操作は、 <code>(x, x)</code> のための領域の確保だけである。</p>
+<h4>配列</h4>
+<p><code>int[3]</code> のような、配列の型について（配列の中身は即値であるとしておく）。これについては次のようにして <code>copy</code> と <code>discard</code> を定めてやればよい：</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>let copy_int_3 :=</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  λ x.</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    let [a, b, c] := x in</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    ([a, b, c], [a, b, c])</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>let discard_int_3 :=</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  λ x.</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    let [a, b, c] := x in</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    ()</span></code></pre></div>
+<p>つまり、まず <code>x</code> から中身をとりだしたうえで、その中身をつかって新たな配列をつくればよい。ここで、</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>let [a, b, c] := x in (...)</span></code></pre></div>
+<p>においては、</p>
+<ol>
+<li><code>x</code> のそれぞれの要素を <code>a</code>, <code>b</code>, <code>c</code> に束縛し、<br />
+</li>
+<li>配列 <code>x</code> をfreeする<br />
+</li>
+</ol>
+<p>という挙動が想定されている。というわけで、たとえばcopyのほうの挙動は、</p>
+<ol>
+<li><code>x</code> のそれぞれの要素が <code>a</code>, <code>b</code>, <code>c</code> に束縛される<br />
+</li>
+<li><code>x</code> が解放される<br />
+</li>
+<li><code>[a, b, c]</code> のためのメモリ領域をわりあてる (1回目)<br />
+</li>
+<li><code>[a, b, c]</code> を新たに構成してメモリ領域に書き込む (1回目)<br />
+</li>
+<li><code>[a, b, c]</code> のためのメモリ領域をわりあてる (2回目)<br />
+</li>
+<li><code>[a, b, c]</code> を新たに構成してメモリ領域に書き込む (2回目)<br />
+</li>
+<li><code>([a, b, c], [a, b, c])</code> のためのメモリ領域をわりあてる<br />
+</li>
+<li><code>([a, b, c], [a, b, c])</code> をメモリ領域に書き込む<br />
+</li>
+</ol>
+<p>といった具合になる。 <code>a</code>, <code>b</code>, <code>c</code> が即値なのでタダでコピーできていることに注意。あるいはまた、discardのほうの挙動は、</p>
+<ol>
+<li><code>x</code> のそれぞれの要素が <code>a</code>, <code>b</code>, <code>c</code> に束縛される<br />
+</li>
+<li><code>x</code> が解放される<br />
+</li>
+</ol>
+<p>という具合になる。 <code>a</code>, <code>b</code>, <code>c</code> が即値なのでタダで破棄できていることに注意。</p>
+<h4>型の型</h4>
+<p><code>A : Type</code> と書くときの <code>Type</code> もまた型であり、それゆえ変換されるべきものである。が、上でみたように、 <code>A : Type</code> のとき、 <code>A</code> は即値と同様に処理できるのであった。というわけで、</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>let copy_type :=</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  λ x. (x, x)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>let discard_type :=</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  λ x. ()</span></code></pre></div>
+<p>として終了である。</p>
+<h4>関数の型</h4>
+<p><code>int -&gt; bool</code> のような、関数の型の変換について。これはやや複雑なので、大意をつかみたいだけであれば読み飛ばしてもらっても構わないかもしれない。なんにせよ、この部分の説明にはまず（型ではなく）λ抽象がどのように変換されるのかについてふれる必要がある。次のようなコードを考えてみる：</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>let f :=</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  let b := true in</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  let y := 10 in</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  λ x. x + (as-int b) + y in</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>(...)</span></code></pre></div>
+<p>なお、 <code>as-int</code> は、（なんでもよいが、たとえば） <code>true</code> を <code>1</code> に、 <code>false</code> を <code>0</code> にそれぞれうつすような関数であるとする。</p>
+<p>さて上記のコードには、 <code>λ x. x + (as-int b) + y</code> という、自由変数として <code>b : bool</code> および <code>y : int</code> をもつλ抽象が含まれている。こうしたλ抽象は、通常のプログラミング言語においては、ふつう</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>((b, y),</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  λ (x, env).</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    let (b, y) := env in</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    x + (as-int b) + y)</span></code></pre></div>
+<p>というペアへと、つまり、</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>({自由変数のあつまり},</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a> λ (もとの引数, env).</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>   let (自由変数だったものたちの名前) := env in</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>   {もとのコード})</span></code></pre></div>
+<p>というペアへと変換される（クロージャ変換）。さて、今回の体系では、ここの処理を次のように拡張する。すなわちλ抽象を次のような3要素のtupleへと変換する：</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>(bool * int,</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a> (b, y),</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  λ (x, env).</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    let (b, y) := env in</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    x + (as-int b) + y)</span></code></pre></div>
+<p>つまり自由変数についての型の情報を添える<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>。ここまでくればもうクロージャの複製・破棄の方法はほとんど明らかである。実際、3つの要素のそれぞれの複製・破棄について、</p>
+<ul>
+<li><code>bool * int</code> の型は <code>Type</code> であるので、これは即値として複製・破棄ができる。<br />
+</li>
+<li><code>(b, y)</code> については、第1成分の <code>bool * int</code> を利用すれば複製・破棄ができる。<br />
+</li>
+<li>関数部分については、これは閉じた関数なので普通の関数ポインタに落とせて、ゆえに即値として複製・破棄ができる。<br />
+</li>
+</ul>
+<p>こうしてクロージャの複製・破棄が実現される<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>。</p>
+<p>型のほうの話に戻れば、結局、 <code>int -&gt; bool</code> のような関数の型の <code>copy</code> / <code>discard</code> は、 <code>int</code> とか <code>bool</code> とかによらず</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>let copy_closure :=</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  λ cls.</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    let (env_type, env, func) := cls in</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    let (env1, env2) := env_type false env in</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    ((env_type, env1, func), (env_type, env2, func))</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>let discard_closure :=</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  λ cls.</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>    let (env_type, env, func) := cls in</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>    let () := env_type true env in</span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>    ()</span></code></pre></div>
+<p>となる。なおここで、</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>let (x1, ..., xn) := x in (...)</span></code></pre></div>
+<p>においては、</p>
+<ol>
+<li><code>x</code> のそれぞれの要素を <code>x1</code>, …, <code>xn</code> に束縛し、<br />
+</li>
+<li>tuple <code>x</code> をfreeする<br />
+</li>
+</ol>
+<p>という挙動が想定されている。</p>
+<h3>変換された型がどう利用されるか</h3>
+<p>最後に、上記のように型が変換できたとして、このときユーザの書いた関数のなかの変数がどのように線形化されるのかを見てみる。たとえば次のような関数があるとする：</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>let to-pair :=</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  λ (A : Type) (x : A). (x, x)</span></code></pre></div>
+<p>この <code>to-pair</code> という関数は次のように使用されることを意図したものである：</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>to-pair int         3             # ~&gt; (3, 3)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>to-pair string      &quot;hello&quot;       # ~&gt; (&quot;hello&quot;, &quot;hello&quot;)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>to-pair (bool * top) (false, unit) # ~&gt; ((false, unit), (false, unit))</span></code></pre></div>
+<p>つまり <code>to-pair</code> は多相的な関数であり、受け取った引数をペアにして返すようなものである（ちなみに <code>int</code> とか <code>string</code> とかの部分は実際には推論で省略できる）。</p>
+<p>さて、すぐに見てわかるように、上記 <code>to-pair</code> の定義においては変数 <code>x</code> が2回、つまり線形でない仕方で使用されている。この非線形な <code>x</code> は、型 <code>A</code> の変換結果を用いて、次のように線形化される：</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>let to-pair :=</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  λ A x.</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    let (x1, x2) := A false x in</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    (x1, x2)</span></code></pre></div>
+<p>つまり、 <code>to-pair</code> は、たしかにさまざまなサイズをもった値を引数 <code>x</code> の位置に受け取るのだが、それに付随する型 <code>A</code> のほうに <code>x</code> を複製するにあたって必要な情報がつねに入ってくるので、 <code>to-pair</code> は <code>x</code> がどんなものであれ複製することができる。discardについても同様で、このような型情報があればうまくいきそうであることがみてとれると思う。</p>
+<h3>本論のおわりに</h3>
+<p>以上で本論は終わり。型が実行され、静的なリソース管理が実現された。多分にスケッチ的ではあるが。</p>
+<p>ここまで読んでもらえたなら、実装にあたって依存型を選ぶことになった理由もなんとなく察してもらえるのではないかと思う。つまり、型がふつうのtermと同じように出現してくれるので、たんに実装がラクなのである。</p>
+<p>そういえば、依存型理論のうれしさを紹介するにあたって私が知っている記事ってほとんど全部くらいの勢いで長さつき配列の例を示しているんだけど（配列の型に長さの情報を付与すれば安全に配列の要素にアクセスできるよ、みたいなやつ）、私は依存型理論のうれしさって、むしろ言語の見通しがよくなるところ、一貫性が高まるところにあるんじゃねえかなあと思っていたりする。ベースの論理体系が依存型になっていると、型についての抽象もふつうの関数もどちらもただのλに落ちてくれるわけで、まあわかりやすい。型の定義のために特別な構文が必要になったりもしない。</p>
+<p>というか依存型理論ってよくつらいつらい言われてるけど別にそうでもないと思うんだよな。型推論が決定不能になるよ～ってのも、そりゃ理論のレベルではそうだろうけど、普通にプログラムを書くぶんにはよっぽど変なことでもしないかぎり (System F を派手に逸脱するようなものを書かないかぎり) すげえ普通に推論できるし。そしてだいたいのプログラムってSystem Fの枠内でわりとハッピーに書けるし。推論がめっちゃ遅くなるわけでもないし。まあいいか。</p>
+<p>ついでにここでひとつ断っておこう。私はこの型を関数に変換する手法はいちおう新しいものだと思って本稿を書いている。が、往々にして世の中には似たようなことを考えているえらい先駆者がいるものである。同じようなことを書いている人が既にいたなら、そのとき本稿は先人にささげるひとつの注釈であるだろう。</p>
+<p>以下は補遺である。こちらを読むと、たぶん、本論がセオリーを知ったあとの格ゲーのようにおもしろくなる。ぜひどうぞ。</p>
+<h2>補遺</h2>
+<h3>自然演繹にすごい勢いで入門する</h3>
+<p>最初は省略することも考えたのだけど、やはり説明上どうにも外せなかった。というわけで自然演繹の入門（超特急）を添える。よりちゃんとした入門記事としては、たとえば<a href="https://www.cs.cmu.edu/~fp/courses/15317-f09/schedule.html">Pfenningの講義資料</a>がよいのではないかと思う。タダで読める。ありがてえ。</p>
+<h4>命題論理ことはじめ</h4>
+<p>まず互いに区別のつく記号のあつまりをひとつ固定して、この集合の要素を命題変数とよぶことにする。命題変数は自然数と同じ数だけあるとする。そのうえで、命題を次のように定める。</p>
+<ol>
+<li><span class="math inline">\( \alpha \)</span> が命題変数であるならば、 <span class="math inline">\( \alpha \)</span> は命題である。<br />
+</li>
+<li><span class="math inline">\( A, B \)</span> が命題であるならば、 <span class="math inline">\( A \to B \)</span> は命題である。<br />
+</li>
+<li>以上によって命題となるものだけが命題である。<br />
+</li>
+</ol>
+<p>たとえば <span class="math inline">\( P, Q, R \)</span> が命題変数であるとき、 <span class="math inline">\( P \)</span>, <span class="math inline">\( P \to Q \)</span> などは命題であるし、 <span class="math inline">\( P \to (Q \to R) \)</span>, <span class="math inline">\( (P \to P) \to R \)</span> などもまた命題である。</p>
+<p>あるいはもしかすると、ここで「<span class="math inline">\( P \to (Q \to R) \)</span>の "<span class="math inline">\( ( \)</span>" と "<span class="math inline">\( ) \)</span>" ってなんだよ」と思う向きがあるかもしれない。そんなに気にしなくてもよいところではあるが、いちおうこの疑問に答えておく。これらのカッコは、たんに <span class="math inline">\( P \to Q \to R \)</span> と書いただけでは、</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>    →</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>   / \</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  →   R</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a> / \</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>P   Q</span></code></pre></div>
+<p>なのか、それとも</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>  →</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a> / \</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>P   →</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>   / \</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  Q   R</span></code></pre></div>
+<p>なのかの区別がつかないので、そこを明示するためのメタな記号である。木構造っていう二次元的なものを文章っていう一次元的な環境で表現するにあたっての道具であって、最初から上記のような木構造を毎回書くと決めていればこのカッコは不要になる。でもそれだといちいち場所をとってだるい。なのでカッコを利用して書いてしまいましょうね、という話。整理すると、</p>
+<ol>
+<li>「<span class="math inline">\( A \to B \)</span> は命題である」と書いてあるときの「<span class="math inline">\( A \to B \)</span>」は上記のような木構造である<br />
+</li>
+<li>でも木構造をいちいち展開して書くのはだるい<br />
+</li>
+<li>ところで文章のほうでもカッコをつかえば木構造をうまく表現できる<br />
+</li>
+<li>ならカッコつかって書けばよくね<br />
+</li>
+</ol>
+<p>という具合である。カッコを利用しているのはあくまで表現上の都合で、そこで表現されているものは木構造である。</p>
+<p>あともうひとつ、最後の条件「以上によって命題となるものだけが命題である」がすこし奇妙に見えるかもしれない。が、これもたいしたことはなくて、たんに、たとえば「じゃあ <span class="math inline">\( P \uparrow \uparrow \downarrow \downarrow \leftarrow \to \leftarrow \to  Q \)</span> とか <code>墨染の君が袂は雲なれや絶えず涙の雨とのみ降る</code> とかは命題なんですか」と尋ねられたときにきちんとNoと答えられるようにするためのものにすぎない。最後の条件がないと、なにが命題であるかはわかるが、なにが命題でないかはわからないということになってしまう。</p>
+<p>命題については終わり。こんどは「準文脈」を次のように定める。</p>
+<ol>
+<li><span class="math inline">\( \cdot \)</span> は準文脈である。<br />
+</li>
+<li><span class="math inline">\( \Gamma \)</span> が準文脈であり、かつ、 <span class="math inline">\( A \)</span> が命題であるとき、<span class="math inline">\( \Gamma, A \)</span> は準文脈である。<br />
+</li>
+<li>以上によって準文脈となるものだけが準文脈である。<br />
+</li>
+</ol>
+<p>ようするに準文脈とは命題の列である。 <span class="math inline">\( \cdot, A, B, C \)</span> みたいなやつ。あるいは同じことだが、露骨に書けば、</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>      ,</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>     / \</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    ,   C</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>   / \</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  ,   B</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a> / \</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>.   A</span></code></pre></div>
+<p>みたいなやつである。命題の場合とちがってカッコの出番がないのは、なんでもよいが、たとえば</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>    ,</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>   / \</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  ,   C</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a> / \</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>A   ,</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>   / \</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>  .   B</span></code></pre></div>
+<p>のような木構造が準文脈の定義からしてそもそも存在せず、それゆえ区別の必要がないことによる。 <span class="math inline">\( \cdot, A, B, C \)</span> を準文脈として書けばそれで木構造がただひとつに決まることによる。</p>
+<p><span class="math inline">\( \cdot \)</span> を空の準文脈とよぶことにする。上の例からもわかるように、空でない準文脈は <span class="math inline">\( \cdot, A_1, \ldots, A_n \)</span> というかたちをしているわけだが、これはふつう冒頭の <span class="math inline">\( \cdot \)</span> を省略して <span class="math inline">\( A_1, \ldots, A_n \)</span> と書かれる。</p>
+<p>順序を無視した準文脈を「文脈」と呼ぶことにする。<span class="math inline">\( A, B, C, C \)</span> と <span class="math inline">\( C, B, A, C \)</span> は、準文脈としては異なるが、文脈としては同一である。</p>
+<p>上記の準備のもと、「判断」を次のように定める。</p>
+<ol>
+<li><span class="math inline">\( \Gamma \)</span> が文脈であり、かつ <span class="math inline">\( A \)</span> が命題であるとき、記号 <span class="math inline">\( \Gamma \vdash A \)</span> は判断である。<br />
+</li>
+<li>以上によって判断となるものだけが判断である。<br />
+</li>
+</ol>
+<p>たとえば <span class="math inline">\( A \vdash A \)</span> とか <span class="math inline">\( C \vdash A \to (B \to B) \)</span> とか <span class="math inline">\( \cdot \vdash ((A \to B) \to A) \to A \)</span> とかはすべて判断である。</p>
+<p>さて、「判断」とかいうあからさまな名前が与えられているとはいえ、これは今の段階ではまだ特定の記号のパターン、特定の形をした木構造にすぎない。先取りして言うなら、「<span class="math inline">\( \Gamma \vdash A \)</span>」を「<span class="math inline">\( \Gamma \)</span>を仮定したとき <span class="math inline">\( A \)</span> は正しい」と解釈できるようにしたいのだが、まだそうした解釈を可能にするための枠組みがない。</p>
+<p>というわけで、次にこの「判断」なるものに対して「この判断は正しい」とか「正しくない」とか言えるようにするための枠組みを定めていく。いわば、われわれは判断の意味について語るための枠組みを定めるのである。</p>
+<p>一般に言って、記号の意味を定めるにあたってはおおむねふたつの路線がある。</p>
+<ol>
+<li>内的な路線。この路線では記号がなにを指示するかを定める。記号「あのリンゴ」に対して、あの机の上に置いてある赤い物体を対応づけるような路線である。これはいわば記号の中身に注目する路線である。指示対象（＝意味）が定められていれば、たとえば「あのリンゴ」によって藤原定家が指示されているとき、それは記号の指示対象（＝意味）として正しくないと判定することができる。<br />
+</li>
+<li>外的な路線。この路線では記号がどう使用されるかを定める。記号「あのリンゴ」に対して、それを聞いた者にあの机の上に置いてある赤い物体に意識を向けさせる、という用法を割り当てるような路線である。これはいわば記号の振る舞いに注目する路線である。用法（＝意味）が定められていれば、たとえば「あのリンゴ」という言明を聞いた者が突然フォックストロットの練習を始めたとき、それは記号の用法（＝意味）として正しくないと判定することができる。</li>
+</ol>
+<p>判断の意味づけにあたり、ここでとるのは後者の路線である。つまり判断という記号がどのような仕方で使用されうるものであるのかをいくつかの規則によって定めていく。このような、判断の用法を定める規則のことを推論規則とよぶ。</p>
+<p>まず推論規則それ自体についての説明が必要だろう。推論規則は一般に次のような形で表現される：</p>
+<p><span class="math display">\[
+\require{bussproofs}
+\begin{prooftree}
+  \AxiomC{\( \mathcal{J}_1 \hspace{1em} \ldots \hspace{1em} \mathcal{J}_n \)}
+  \RightLabel{\( \mathsf{(name)} \)}
+  \UnaryInfC{\( \mathcal{J} \)}
+\end{prooftree}
+\]</span></p>
+<p>横棒の上にくる <span class="math inline">\( \mathcal{J}_i \)</span> が、前提となる判断である（<span class="math inline">\( \mathcal{J} \)</span> は "Judgement" の "J"）。これらの前提がすべてそろっているとき、横棒を書いてその下に結論としての新たな判断 <span class="math inline">\( \mathcal{J} \)</span> を書いてよい、とするのが推論規則であり、<span class="math inline">\( \mathsf{(name)} \)</span> はその規則の名前である。</p>
+<p>さて規則を追加していこう。まずは変数についての規則である：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( (\mathsf{var}) \)}
+  \UnaryInfC{\( \Gamma, A \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>これは前提として必要な判断が0個であるような規則で、それゆえ横棒の上が空白になっている。キブンとしては、「<span class="math inline">\( A \)</span> が仮定されているならば、 <span class="math inline">\( A \)</span> は正しい。 <span class="math inline">\( \Gamma \)</span> を追加で仮定しても同じことである」のように読まれるべきものである。もうすこし正確に言うと、上記の推論規則を認めることによって、「<span class="math inline">\( \vdash \)</span>」がわれわれの「ならば」の類比物として読まれるべきものとなる。</p>
+<p>いくつか例を示しておこう。以下はすべて規則 <span class="math inline">\( \mathsf{(var)} \)</span> の正当な適用である：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( B, A \vdash A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, B, C, D \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>他方で以下はすべて規則 <span class="math inline">\( \mathsf{(var)} \)</span> の正当でない適用である：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, C \vdash B \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \to A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( \cdot \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>さて次の規則にうつる。次は、「<span class="math inline">\( \vdash \)</span>」の意味を命題のほうの「<span class="math inline">\( \to \)</span>」に埋め込むものである。</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma, A \vdash B \)}
+  \RightLabel{\( (\to_{\mathsf{i}}) \)}
+  \UnaryInfC{\( \Gamma \vdash A \to B \)}
+\end{prooftree}
+\]</span></p>
+<p>これはキブンとしては、「「<span class="math inline">\( \Gamma \)</span> かつ <span class="math inline">\( A \)</span>」 ならば <span class="math inline">\( B \)</span> が成立しているとき、<span class="math inline">\( \Gamma \)</span> ならば 「<span class="math inline">\( A \to B \)</span>」が成立する」と読まれるべきものである。われわれはすぐ直前で規則 <span class="math inline">\( \mathsf{(var)} \)</span> によって、「<span class="math inline">\( \vdash \)</span>」の意味を「ならば」として、あるいは少なくとも「ならば」と読みうるものとして定めたのだった。ひるがえって、こちらの推論規則は、こうした判断のレベルでの「ならば」を、命題のレベルの 「<span class="math inline">\( \to \)</span>」 という記号に落としこむものになっている。</p>
+<p>ところで、上記の規則は論理結合子「<span class="math inline">\( \to \)</span>」を含んだ命題を新たに作りだすものになっている。すなわちこの規則は、どういった条件のもとで特定のかたちをした命題を言いうるのかを定めるものであり、こうした推論規則は導入則 (introduction rule) とよばれる。逆に、特定のかたちをした命題からどういったことが言いうるのかを定めるものもあり、こちらの推論規則は除去則 (elimination rule) とよばれる。「<span class="math inline">\( \to \)</span>」の除去則は次のようになる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_{\mathsf{e}}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]</span></p>
+<p>これはようは「<span class="math inline">\( \to \)</span>」として表現された「ならば」を使う方法を与えるものである。「<span class="math inline">\( A \)</span> ならば <span class="math inline">\( B \)</span>」と「<span class="math inline">\( A \)</span>」とが分かっているときに「<span class="math inline">\( B \)</span>」を導出してよいとするものであり、特にこれといってびっくりするようなことはないはずである。</p>
+<p>推論規則としてはとりあえず以上の3つ、つまり、</p>
+<ol>
+<li>変数の規則<br />
+</li>
+<li>「ならば」の導入則<br />
+</li>
+<li>「ならば」の除去則<br />
+</li>
+</ol>
+<p>をとっておく。望むならANDとかORとかも追加できるが、話が無駄に長くなるので控えておく。</p>
+<p>ここまでに定めた推論規則を繰り返し適用することにより、たとえば次のような記号のパターンを生成することができる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( B, B, A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( B, B \vdash A \to A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( B \vdash B \to (A \to A) \)}
+  \AxiomC{\( \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( B \vdash B \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( B \vdash A \to A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \cdot \vdash B \to (A \to A) \)}
+\end{prooftree}
+\]</span></p>
+<p>こうして生成される記号のパターンのことを証明図あるいは単に証明とよぶ。</p>
+<h4>証明図にある回り道</h4>
+<p>ある判断 <span class="math inline">\( \Gamma \vdash A \)</span> を導出するにあたっても、いろいろな証明図がありうる。たとえば <span class="math inline">\( \cdot \vdash A \to A \)</span> の証明について考えてみる。もちろんこれには</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \cdot \vdash A \to A \)}
+\end{prooftree}
+\]</span></p>
+<p>という素直な証明があるが、他方で、次のような冗長な証明もありうる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( A \vdash A \to A \)}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \cdot \vdash A \to A \)}
+\end{prooftree}
+\]</span></p>
+<p>こちらも同じ <span class="math inline">\( \cdot \vdash A \to A \)</span> を証明しているが、にもかかわらず証明図が無駄にデカい。</p>
+<p>ここで次のように問うてみよう。すなわち、このデカさはどこに由来しているのだろうか。上記の証明図はなぜ無駄にデカくなっているのだろうか。結論から言えば、それは、上記の証明図が「回り道」を含んでいるからである。ここで言う「回り道」は、具体的には次の部分である：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( A, A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( A \vdash A \to A \)}
+  \AxiomC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( A \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>ここでは論理結合子「<span class="math inline">\( \to \)</span>」が導入され、さらにこれがすぐさま除去されている。しかし導入してすぐに除去するくらいであれば、最初から導入しなければよいのではないか。このような意味において、上記は「回り道」、証明図を余計にデカくするものである。こうした「回り道」は、より一般には、次のような形をしている：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, A \vdash B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]</span></p>
+<p>すなわち「回り道」とは、「ある論理結合子を導入して、すぐさまその論理結合子を除去する」ようなパターンである（ここで、 <span class="math inline">\( \mathcal{H}_1, \mathcal{H}_2 \)</span> は「上につづく証明図」をひとつの記号で表現したものである）。こうした「回り道」は簡約基ともよばれる。</p>
+<p>ここで、一般的なほうの簡約基を5分ほどグッとにらむと次のようなことがわかる。すなわち、上記のように簡約基を含んだ証明図があるとき、 <span class="math inline">\( \Gamma \vdash B \)</span> の証明であって簡約基をなくしたものを作ることができる。これには次のようにすればよい。まず</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, A \vdash B \)}
+\end{prooftree}
+\]</span></p>
+<p>の部分に注目する。いま、この <span class="math inline">\( \mathcal{H}_1 \)</span> のどこかで <span class="math inline">\( \Gamma, A \vdash B \)</span> の文脈にある <span class="math inline">\( A \)</span> が使用されているとする。このとき、この <span class="math inline">\( A \)</span> の代わりに、</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>由来の <span class="math inline">\( A \)</span> を用いるようにしてやる。こうすれば <span class="math inline">\( \Gamma, A \vdash B \)</span> のほうの <span class="math inline">\( A \)</span> には出る幕がなくなる。これはすなわち、 <span class="math inline">\( \Gamma, A \vdash B \)</span> の文脈の中にある <span class="math inline">\( A \)</span> がなくとも <span class="math inline">\( B \)</span> が証明できるということである。すなわち、<span class="math inline">\( \mathcal{H&#39;}_1 \)</span> を、 <span class="math inline">\( \mathcal{H}_1 \)</span> に対して</p>
+<ol>
+<li>仮定にあった <span class="math inline">\( A \)</span> の代わりに <span class="math inline">\( \mathcal{H}_2 \)</span> 由来の <span class="math inline">\( A \)</span> を用いるようにする<br />
+</li>
+<li>仮定の <span class="math inline">\( A \)</span> を消去する</li>
+</ol>
+<p>という書き換えをおこなって得られる証明図であるとすれば、</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H&#39;}_1 \)}
+  \UnaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]</span></p>
+<p>が導出可能であるということである。この書き換えは次のようにまとめられる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, A \vdash B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\hspace{3em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( {\mathcal{H&#39;}_1} \)}
+  \UnaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]</span></p>
+<p>このような、簡約基を打ち消す書き換えのことを簡約とよぶ。証明図を簡約しつづけて簡約の余地のない証明図を得ることを正規化とよぶ。</p>
+<h4>証明図を簡約する / プログラムを実行する</h4>
+<p>前節では <span class="math inline">\( \mathcal{H} \)</span> という記号で証明木を表わしていた。ここでは前節よりもローカルな仕方で証明木の情報を保持することを考えてみる。つまり、推論規則を適用するたびに、その適用した推論規則のログを残すようにしてみる。そのログを見ればそこまでにどういった推論規則の適用があったのかを判別できるようにするのである。まず、変数の規則をもういちど見てみる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( \Gamma, A \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>ここでどのような推論をおこなったのかのログを判断に埋め込みたい。そのためには、たとえば</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, A \vdash A \)}
+\end{prooftree}
+\]</span></p>
+<p>という推論において、文脈の <span class="math inline">\( A \)</span> のうちどちらが使用されているのかを区別できていなければならない（でないとその情報が失われてしまう）。そこで、文脈のそれぞれの命題に名前を与えることにする。具体的には次のようにする。まず、自然数と同じ数だけの要素からなる集合をとり、これを変数集合と呼ぶことにする。また変数集合の元のことを変数と呼ぶことにする。そのうえで、準文脈の定義を次のように拡張する。</p>
+<ol>
+<li><span class="math inline">\( \cdot \)</span> は準文脈である。<br />
+</li>
+<li><span class="math inline">\( \Gamma \)</span> が準文脈であり、かつ、 <span class="math inline">\( x \)</span> が変数であり、かつ、 <span class="math inline">\( A \)</span> が命題であるとき、記号 <span class="math inline">\( \Gamma, x : A \)</span> は準文脈である。<br />
+</li>
+<li>以上によって準文脈となるものだけが準文脈である。</li>
+</ol>
+<p>さらにまた、次のように「証明項」を定義する。これを用いて証明のログを記録していくことになる。</p>
+<ol>
+<li><span class="math inline">\( x \)</span> が変数であるとき、 <span class="math inline">\( x \)</span> は証明項である。<br />
+</li>
+<li><span class="math inline">\( x \)</span> が変数で、かつ <span class="math inline">\( e \)</span> が証明項であるとき、 <span class="math inline">\( \lambda x. e \)</span> は証明項である。<br />
+</li>
+<li><span class="math inline">\( e_1 \)</span>, <span class="math inline">\( e_2 \)</span> が証明項であるとき、 <span class="math inline">\( e_1 \mathbin{@} e_2 \)</span> は証明項である。<br />
+</li>
+<li>以上によって証明項となるものだけが証明項である。</li>
+</ol>
+<p>この証明項を用いて、判断の定義を次のように拡張する。</p>
+<ol>
+<li><span class="math inline">\( \Gamma \)</span> が文脈であり、 <span class="math inline">\( e \)</span> が証明項であり、 <span class="math inline">\( A \)</span> が命題であるとき、記号 <span class="math inline">\( \Gamma \vdash e : A \)</span> は判断である。<br />
+</li>
+<li>以上によって判断となるものだけが判断である。</li>
+</ol>
+<p>これで規則 <span class="math inline">\( \mathsf{(var)} \)</span> を拡張するための準備がととのった。先に <span class="math inline">\( A, A \vdash A \)</span> の例がどのように変わるかを示したほうがわかりやすいだろう：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( x : A, y : A \vdash y : A \)}
+\end{prooftree}
+\]</span></p>
+<p>つまり文脈のそれぞれの命題に <span class="math inline">\( x \)</span> や <span class="math inline">\( y \)</span> といった名前が与えられたことによって、どちらの命題が規則 <span class="math inline">\( \mathsf{(var)} \)</span> において使用されたのかの情報を保持できるようになる。推論規則としては、</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( \Gamma, x : A \vdash x : A \)}
+\end{prooftree}
+\]</span></p>
+<p>となる。判断 <span class="math inline">\( \Gamma \vdash e : A \)</span> における証明項 <span class="math inline">\( e \)</span> の部分に、その判断がどのようにして導出されたのかについてのログ情報が入ってくる。</p>
+<p>「<span class="math inline">\( \to \)</span>」の導入則にうつろう。こちらは次のように拡張される：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma, x : A \vdash e : B \)}
+  \RightLabel{\( (\to_{\mathsf{i}}) \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x. e : A \to B \)}
+\end{prooftree}
+\]</span></p>
+<p>仮定が <span class="math inline">\( \Gamma, x : A \vdash e : B \)</span> となっているのはたんに判断の定義が拡張されたからで、特におどろくべきところはない。また、結論のほうに出てくる証明項が <span class="math inline">\( \lambda x. e \)</span> という「いかにも」な代物になっているが、これはたんに「<span class="math inline">\( \to \)</span>」の導入則を変数 <span class="math inline">\( x \)</span> に注目して適用したということ（＝証明のログ）を記録しているにすぎない。こうした推論規則の拡張はまったくもってオートマティックであり、特に創意工夫が絡んできたりするところではない。</p>
+<p>そして最後に「<span class="math inline">\( \to \)</span>」の除去則を見る。こちらは次のように拡張される。</p>
+<p><span class="math display">\[
+\newcommand{\app}[2]{#1 \mathbin{@} #2}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e_1 : A \to B \)}
+  \AxiomC{\( \Gamma \vdash e_2 : A \)}
+  \RightLabel{\( (\to_{\mathsf{e}}) \)}
+  \BinaryInfC{\( \Gamma \vdash \app{e_1}{e_2} : B \)}
+\end{prooftree}
+\]</span></p>
+<p>こちらもたんに証明項がわりあてられているというだけの話で、特におどろくべきところはない。</p>
+<p>さて、ここでさきほどの簡約基に証明項をわりあてることを考えてみる。すると次のような証明図が得られる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, x : A \vdash e_1 : B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x. e_1 :  A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash \app{(\lambda x. e_1)}{e_2} : B \)}
+\end{prooftree}
+\]</span></p>
+<p>なんだかそれっぽい雰囲気が出てきたが、そしらぬ顔で話を続けてみる。簡約基をなくす操作についてもういちど考えてみる。これは結局、<span class="math inline">\( \mathcal{H}_1 \)</span> に出現する <span class="math inline">\( x : A \)</span> の使用を <span class="math inline">\( e_2 : A \)</span> で代替するという操作である。つまり、簡約結果のほうの証明項は、 <span class="math inline">\( e_1 \)</span> の中に出現するすべての <span class="math inline">\( x \)</span> を <span class="math inline">\( e_2 \)</span> で置き換えたものになる。これはすなわち、</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, x : A \vdash e_1 : B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x. e_1 :  A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash \app{(\lambda x. e_1)}{e_2} : B \)}
+\end{prooftree}
+\hspace{3em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( {\mathcal{H&#39;}_1} \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 \{x := e_2\} : B \)}
+\end{prooftree}
+\]</span></p>
+<p>ということである。ここで <span class="math inline">\( \{x := e_2\} \)</span> は変数 <span class="math inline">\( x \)</span> の出現を証明項 <span class="math inline">\( e_2 \)</span> で置き換えるという代入の操作で、細かな定義は話が長くなるので省略する。 <span class="math inline">\( x + y + x \)</span> を <span class="math inline">\( e_2 + y + e_2 \)</span> に置き換えるような代物で、まあだいたい気合で想像できると思うので、適宜気合で想像しておいてほしい。</p>
+<p>そして最後に、上記の簡約における証明項のふるまいについてだけ注目すれば、次のような（見慣れた？）規則が得られる：</p>
+<p><span class="math display">\[
+  \app{(\lambda x. e_1)}{e_2} \leadsto e_1 \{x := e_2\}
+\]</span></p>
+<p>というわけで、証明図を調べていた我々は、いつのまにかλ計算に、ひいてはプログラムにたどりついた。ひるがえって、証明項をプログラムであるとみなせば、今度は、判断 <span class="math inline">\( x_1 : A_1, \ldots, x_n : A_n \vdash e : A \)</span> は「自由変数 <span class="math inline">\( x_1 : A_1, \ldots, x_n : A_n \)</span> のもと、プログラム <span class="math inline">\( e \)</span> は <span class="math inline">\( A \)</span> という型をもつ」という型判断として読まれることになる。特に、ついさっきまで命題として解釈されていたものが、今度は型として解釈されることになる。こうして、たとえば証明図における回り道を解消することはプログラムを実行することに対応し、また回り道をどういう順番で解消していくかがプログラムをどういう戦略で実行していくか（名前呼び、値呼びなど）に対応し、などなど、と話が続いていくことになる。</p>
+<p>こうした証明とプログラムとの対応関係はしばしばカリーハワード同型対応などとよばれる。「ならば」の分析からスタートして、証明について議論していたはずが、実際には同時にプログラムについての議論も進めていたことになる、という具合である。</p>
+<p>証明の言葉をつかえるようになると、見通しもよくなるし啓発的だし、なにより楽しい。たとえば自然演繹のほうの議論を拡張して「〜は正しい」だけでなく「〜は必然的である」という語彙を追加してやって、で、こいつをプログラムのほうにうつすと<a href="https://www.cs.cmu.edu/~fp/papers/popl96.pdf">多段階計算（lispのquasiquoteみたいなやつ）に相当するものが引き出せたりする</a>。</p>
+<p>ちなみに上記のような、証明のほうで作った概念（たとえば必然性の様相）のプログラム側の対応物（たとえば多段階計算）をしばしば計算論的解釈という。「必然性（にもいろいろあるが、そのうちのひとつ）の計算論的解釈は多段階計算である」、みたいな。</p>
+<h3>証明論からくる動機</h3>
+<h4>証明論でやっていこう</h4>
+<p>……と、ここまでが普通のカリーハワード同型対応の紹介である。だが本稿ではこの話に続きがある。いや、実際、私はけっこう感動したのだ、初めてカリーハワード同型対応を知ったとき。それで嬉々として、「よし、じゃあ試しに、同型対応をそのまま利用したような、あらゆる計算に証明論的な背景がひかえているような言語を書いてみよう」と思い立っていろいろ考えてみた。</p>
+<p>変数はプログラミング言語のほうに簡単にうつせる。ならばの導入則もいい。除去則もよろしい。あれこれの他の論理結合子もノリで追加できる。不動点演算子も追加できて、はいチューリング完全。多相性も自然演繹のほうを命題論理から述語論理のちょっと弱いバージョンに拡張してやることで実現できて、型推論もよくある手法でふつうに実装できて、いいじゃん、いけるじゃん、と勢いづくわけだけど、ここでふと気付く。「……これメモリどうやって管理すんの？」</p>
+<p>証明との対応がつきそうな既存の言語を調べてみる。どうやらGCを利用しているようである（OCaml, Haskell, F#, Idris, Coq, Agda, Lean）。なるほど。しかし今現在はカリーハワードに注目しているのであり、ならば証明の言葉でメモリも管理したいというのが人情である。いや人情であるかは知らんが、少なくとも私の感情ではあった。でもそういう言語は見つからなかった。</p>
+<p>結局、上にあるような、プログラムを証明と同等のものとみなしうるという謳い文句はたしかに部分的には本当であるのだけど、少なくとも普通のλ計算をベースの言語とするかぎりにおいて、リソースについての議論は同型対応を逸脱するイレギュラーなものとして、実装上の工夫によって解決されるべきものとして処理されているようであった。なかなかうまくいかないものである。</p>
+<h4>regionでよくないかしら</h4>
+<p>さらにリソースの管理方式について調べていくとregion-basedな路線に出会うことになる。これは型システムにアノテーションを加えることでメモリ管理のための情報をとるという路線である。なるほどクールな路線ではある。メモリ管理も静的になるし、変な仕方でメモリを使用していた場合にはそれをコンパイル時に検出できたりもするし。</p>
+<p>けれども私は強欲で、話をもっと証明に寄せたいと思ってしまうのである。直観主義の自然演繹を逸脱するようなアノテーションを利用するのは避けたい。プログラミング言語のほうに「証明論っぽくない」™、実装ありきのものを入れるのではなく、いつもの自然演繹の内部にリソース管理のための語彙を認めたい。「証明について考えていたらプログラムが出てくる」の図式をメモリについても維持したい。だから、現在の関心のもとでは、region-basedな体系をそのまま受け入れることはできない。別な関心のもとでは超便利であるとはいえ。</p>
+<p>おそらく、ここでregion推論とよばれる手法についても検討してみるべきだろう。これは普通の型推論の拡張であって、型を推論するのと同時にregionを — メモリ管理のための情報を — 推論するものである。この手法のもと、たとえばStandard MLというOCamlによく似た言語（言語仕様）のコンパイラであって、静的にメモリを割り当てる/解放するようなものが<a href="https://sourceforge.net/projects/mlkit/">開発されていたりする</a><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>。</p>
+<p>これはすなわち、特に追加のアノテーションを書くことなしに、直観主義の範囲で書かれたプログラムに対してそのメモリについての挙動を静的に定めてやれるということである。ならばこれで全部オッケーなのではないか。推論つきのregion-based memory management, これこそが顧客が本当に必要だったものなのではないか。</p>
+<p>これに対しての応答は、次のような、型アノテーションが省略されたプログラムについて考えてみるところから始まる：</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>λx. (not x, 10)</span></code></pre></div>
+<p>上記のλ抽象の型を推論するにあたり、ふつうコンパイラは <code>x</code> の型をいったん不明であるとし、そこに型変数を挿入するだろう。つまり、型変数を <code>?M</code> と書くとして、</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>λ(x : ?M). (not x, 10)</span></code></pre></div>
+<p>のようなtermをつくるだろう。そのうえで型推論をおこない、 <code>not : bool -&gt; bool</code> のような情報を利用して、 <code>bool = ?M</code> のような制約がつくられる。そうしてこれが解かれ、 <code>?M = bool</code> という置換が得られる。そしてこれをもとのtermに適用することによって、</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>λ(x : bool). (not x, 10)</span></code></pre></div>
+<p>のようなtermがつくられる。それゆえもとのユーザのプログラムはこちらのプログラムの略記であったということになる。ここで注目すべきは、上記のプログラムに対してまさに上記のような仕方で <code>?M</code> という穴が与えられたのは、ひとえにその型推論の定義によるという点である。もし仮に、（なんでもいいが）たとえばこの型推論において変数の使用回数についての情報も取得したいのであれば、コンパイラは</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>λ(x : &lt;?M, ?n&gt;). (not x, 10)</span></code></pre></div>
+<p>といった具合のtermを作ることになり、これが解かれて</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>λ(x : &lt;bool, 1&gt;). (not x, 10)</span></code></pre></div>
+<p>のようなtermが得られ、それゆえもとのユーザのプログラムは今度はこちらの略記であったということになる。というわけで、ユーザが書いたプログラムがどのような略記であるかは、ひいてはその略記を展開した姿は、型推論に相対的である。</p>
+<p>さて、region推論は型推論の一種である。それゆえ、こうした推論をおこなう言語においてユーザが書くプログラムもまた、region推論に沿った略記ということになる。もっと言えば、region推論をおこなう言語において書かれるプログラムは、ちょうど上記の <code>?n</code> のようにして、型だけでなくregionについての省略も含んだものとなる。「本当は具体的にregionについての情報も書けるんだけど省略してある」という具合である。</p>
+<p>というわけで、region推論をおこなう言語において直観主義の範囲で閉じているように見えるプログラムを書いてみせたところで、それはつまるところregionについての記述が省略された – けれども推論結果としてそこにある – プログラムだということになる。推論の仕方を変えた時点で、もとのプログラムがどのような略記であるかが変化している。それゆえ結局、region推論をおこなうケースは、最初からregionを型システムにもっている言語についての議論に帰着される。なのでregion推論による路線もまた、（何度も強調しているようにそれ自体はイケているが）現在の関心からして満足のいくものではない。</p>
+<h4>動機と位置づけ</h4>
+<p>このようにして次のようなワガママな思いが浮かびあがってくる。つまり、ベースの言語をよくある自然演繹のものとして、証明論の言葉でメモリを管理することはできないのだろうか。λ計算に追加のアノテーションを与えることなしに、そもそものもとの言語のなかにリソース管理の情報を見つけだすことでメモリを管理できないだろうか。カリーハワード同型対応はプログラムの簡約についての説明を与えてくれるわけだが、ここにメモリについての説明も見つけられないか。</p>
+<p>そしてこうした観点からすると、本稿はこの思いに対して肯定的に答え、さらに具体的にどのようにしてリソース管理を実現するかを示し、また同時にその実装も与えるものとなっている。「それができりゃあ苦労しないよ」と言われそうな与太話の「それ」を実現するようなものになっている。……苦労しなくなるのかどうかは謎だが。</p>
+<p>こうしてようやく本稿に動機と位置づけが与えられる。長かった。</p>
+<p>ところで、本論で見たように、リソース管理のための情報は実は命題＝型のうちにあるのであり、しかもそれはη展開とかいういかにも証明論めいたものを経由して利用されるのであった。しかしそれにしても、なぜη展開なのだろうか？ どうしてη展開について考えることがリソースについて考えることに絡んでくるのだろうか？ 次節ではこの点についてふれる。</p>
+<h3>局所完全性の計算論的意義</h3>
+<h4>局所健全性</h4>
+<p>いったん証明論のほうに話を引き戻そう<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>。さきほど、証明図における回り道を消去するものとしての簡約をみた。ここについてもうすこし詳しく調べてみる。いま、たとえば「かつ」を論理結合子として目下の体系に組み込みたいとする。<span class="math inline">\( A \)</span> と <span class="math inline">\( B \)</span> との「かつ」を「<span class="math inline">\( A \land B \)</span>」と書くとして、「<span class="math inline">\( \land \)</span>」の導入則と除去則はどうなるべきか。</p>
+<p>いや、まあ、導入則と除去則を書き下すことそのものは別にむずかしくない。導入則はたとえば次のようになるだろう：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+\end{prooftree}
+\]</span></p>
+<p>つまり、<span class="math inline">\( A \land B \)</span> が言えるためには、<span class="math inline">\( A \)</span> と <span class="math inline">\( B \)</span> とがともに言えていなければならない。当たり前といえば当たり前である。除去則も特にむずかしくなくて、選択の余地はあるが、たとえば次のようなものがとれる：</p>
+<p><span class="math display">\[
+\newcommand{\andlet}[3]{\mathsf{let}\, #1 := #2\, \mathsf{in}\, #3}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}\, e : A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}\, e : B \)}
+\end{prooftree}
+\]</span></p>
+<p>どうでもいいが、ここで <span class="math inline">\( \pi \)</span> は "projection" の "p" の意である。</p>
+<p>この論理結合子の簡約は次のようになるだろう：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(e_1, e_2) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+\end{prooftree}
+\]</span></p>
+<p><span class="math inline">\( \pi_\mathsf{R} \)</span> のほうについても同様であろう：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(e_1, e_2) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+\end{prooftree}
+\]</span></p>
+<p>ここまでは特に問題ないと思う。</p>
+<p>さてここで悪魔に魂を売って、「<span class="math inline">\( \land \)</span>」の導入則を次の2つに置き換えることを考えてみる。</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+\end{prooftree}
+\]</span></p>
+<p>まあ見るからにヤバい。なんといっても、意味がわからない。実際、このような論理結合子があると、</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\]</span></p>
+<p>としてやるだけで、任意の命題 <span class="math inline">\( A \)</span> から任意の命題 <span class="math inline">\( B \)</span> が証明できてしまう。論理体系がぶっ壊れる。このような導入則と除去則の組み合わせを認めるわけにはいかないだろう。</p>
+<p>なるほどこのとき「<span class="math inline">\( \land \)</span>」は意味不明である。論理体系をぶっ壊すものである。上の実験からわかるのは、導入則と除去則のあいだにはなんらかの関係が成立していなければならず、そこが崩れていると論理体系をぶっ壊すような、およそ正気ではない、わけのわからない (unsoundな) 論理結合子ができあがってしまうということである。では、ひるがえって、ある論理結合子がまともなものであるためには、導入則と除去則のあいだにいったいどのような関係が成立していないといけないのだろう？</p>
+<p>試しに、「論理体系がぶっ壊れるからなんなの？ なんか問題ある？？」と開き直り、そのまま話を続けてみる。通常の「<span class="math inline">\( \land \)</span>」のときと同じように、我々はこの気の狂った論理結合子に対しても簡約を定義しようとするだろう。簡約されるべき「回り道」は、この論理結合子については、導入則2つと除去則2つの組み合わせで次の4つのようになる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(\mathsf{magic}_\mathsf{L}\, e) : A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(\mathsf{magic}_\mathsf{R}\, e) : A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{R}\, e) : B \)}
+\end{prooftree}
+\]</span></p>
+<p>これらのうち、まず1つ目のものについては次のように簡約が定められよう：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(\mathsf{magic}_\mathsf{L}\, e) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+\end{prooftree}
+\]</span></p>
+<p>また4つ目のものについても次のようにすればよい：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{R}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+\end{prooftree}
+\]</span></p>
+<p>問題は2つ目のものと3つ目のものである。2つ目のほうを例にとる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{?} : B \)}
+\end{prooftree}
+\]</span></p>
+<p>われわれは上記の回り道を打ち消すことができない。というのは、回り道を打ち消すためには、除去則の結論（ここでは<span class="math inline">\( B \)</span>）を導入則の前提（ここでは<span class="math inline">\( A \)</span>）だけをつかって示す必要があるわけだが、まさにそれが不可能であるためである。比較対象として、ここで通常の「<span class="math inline">\( \land \)</span>」の簡約を見てみる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(e_1, e_2) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+\end{prooftree}
+\]</span></p>
+<p>ここでは確かに、除去則の結論としての「<span class="math inline">\( A \)</span>」が、導入則の前提としての「<span class="math inline">\( A \)</span>」および「<span class="math inline">\( B \)</span>」だけを用いて証明されていることがわかる（今回はたまたま <span class="math inline">\( A \)</span> しか使用されていないが）。</p>
+<p>結局、回り道を打ち消す操作とは、除去則の結論を導入則の前提から証明するという操作である<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>。つまり、簡約が定義できるためには、導入則の結論を除去して得られうるすべての命題が、導入則の前提から証明できなけばならない。言い換えるなら、導入則に対し、除去則が強すぎてはいけない。 — 除去則が強すぎると、導入則の前提でカバーできる範囲を逸脱した命題が得られてしまう。</p>
+<p>通常の正気な「<span class="math inline">\( \land \)</span>」の例で言えば、導入則の結論としての <span class="math inline">\( A \land B \)</span> を除去して得られうるすべての命題（つまり <span class="math inline">\( A \)</span> および <span class="math inline">\( B \)</span> ）が、導入則の前提（つまり <span class="math inline">\( A \)</span> および <span class="math inline">\( B \)</span>）から証明できなければならない。そしてこの性質は満足されており、だからこそ「<span class="math inline">\( \land \)</span>」の簡約が可能になっている。</p>
+<p>他方、発狂した「<span class="math inline">\( \land \)</span>」の例で言えば、導入則の結論としての <span class="math inline">\( A \land B \)</span> を除去して得られうる命題 <span class="math inline">\( B \)</span> は、 <span class="math inline">\( A \land B \)</span> の導入則の前提が <span class="math inline">\( A \)</span> であるとき、導入則の前提から証明することはできない：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{?} : B \)}
+\end{prooftree}
+\]</span></p>
+<p>それゆえ簡約が定義できない。導入則に対して除去則が強すぎて、本当であれば言えないはずの <span class="math inline">\( B \)</span> が言えてしまっている。</p>
+<p>一般に、簡約の定義できる論理結合子は局所健全性 (local soundness) をもつという。局所健全性をもたないということは、ようするに本来言えないはずのことが言えるということである。あの発狂した論理結合子は、局所健全性をみたしていないがために論理体系をぶっ壊していた、と整理できよう。</p>
+<h4>局所完全性</h4>
+<p>さて、こう整理すると、今度は局所健全性をひっくり返した性質について考えられるようになる。つまり「除去則が弱すぎない」という性質を考えられるようになる。こちらの性質は局所完全性とよばれる。</p>
+<p>局所健全性のときは、けっきょく当該の性質を「簡約が定義できること」という証明図の書き換え可能性についての話に帰着できた。同様に、局所完全性についても、この性質を証明図の書き換え可能性によってとらえることができる。一般にやるとかえってわかりづらそうなので、ここでは <span class="math inline">\( A \land B \)</span> を例にとって説明する。いま、 <span class="math inline">\( e : A \land B \)</span> の証明図が得られているとする。結論から述べれば、このとき、</p>
+<ol>
+<li><span class="math inline">\( A \land B \)</span> の証明図であって、<br />
+</li>
+<li>前提として出現するものが <span class="math inline">\( e : A \land B \)</span> だけであり、<br />
+</li>
+<li>すべての <span class="math inline">\( e : A \land B \)</span> の出現に対してすぐさま除去則が適用されている<br />
+</li>
+</ol>
+<p>ような証明図を構成できるとき、「<span class="math inline">\( \land \)</span>」は局所完全性をもっている、とする。もちろんここは「なんで？」となるところで、さっさとこれがどういう理屈にもとづいているのかを見ていこう。まず、上記の条件に沿った <span class="math inline">\( e : A \land B \)</span> の書き換えとして次のようなものがとれる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \land B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{left}\, e : A \)}
+  \AxiomC{\(  \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{right}\, e : B \)}
+  \BinaryInfC{\( \Gamma \vdash (\mathsf{left}\, e, \mathsf{right}\, e) : A \land B \)}
+\end{prooftree}
+\]</span></p>
+<p>この展開先の証明図について、確かに、</p>
+<ol>
+<li>これが <span class="math inline">\( A \land B \)</span> の証明図であること<br />
+</li>
+<li>前提として出現するのが <span class="math inline">\( e : A \land B \)</span> だけであること<br />
+</li>
+<li>すべての <span class="math inline">\( e : A \land B \)</span> に対してすぐさま除去則が適用されていること</li>
+</ol>
+<p>がわかると思う。</p>
+<p>いま、仮に除去則が弱すぎたとする。このときは、「すべての <span class="math inline">\( A \land B \)</span> がすぐさま除去される」という条件が存在することにより、<span class="math inline">\( A \land B \)</span> の情報はいくらか欠損した形でしか利用できなくなる。それゆえもとの <span class="math inline">\( A \land B \)</span> の証明を再構成することはできなくなる。たとえば <span class="math inline">\( A \land B \)</span> の除去則から</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{right}\, e : B \)}
+\end{prooftree}
+\]</span></p>
+<p>を削除したとする。このときは上記の書き換えの <span class="math inline">\( \mathsf{right}\, e : B \)</span> の枝のほうが構成できず、ゆえに「<span class="math inline">\( A \land B \)</span>」を取り戻すことはできない。それゆえこのとき「<span class="math inline">\( \land \)</span>」は局所完全性をもたない（＝除去則が弱すぎる）。</p>
+<p>逆に言えば、<span class="math inline">\( A \land B \)</span> を取り戻せているという事実によって、<span class="math inline">\( A \land B \)</span> の除去則が弱すぎないことがわかる。だから上記3点をみたすような展開が可能であることは「<span class="math inline">\( \land \)</span>」の局所完全性の根拠になる。</p>
+<h4>局所健全性と時間 / 局所完全性と空間</h4>
+<p>さて、一般に言って、プログラムの挙動について考えるとき、展開操作、つまり局所完全性に対応する証明論的な書き換えは、ぶっちゃけ影が薄い。なんならほとんど無視されるくらいの勢いであり、もっぱら簡約のほうにだけ注目されるのが常である。いや、「常である」は言いすぎだろうが、しかしそれくらいの雰囲気はある。特に、λ計算ベースのプログラミング言語の計算の挙動について考えるだけなら、簡約のほうにだけ注目すればそれで終了であり、展開には出る幕がない。</p>
+<p>けど、それってわりと不思議であるような気もする。簡約のほうに注目している — 簡約をプログラムとして勝手に便利に利用している — のはヒトの都合で、いわば論理体系から見ればそんなことは知ったこっちゃないわけで、だったら展開が簡約と同じくらいの重要性をもっていてもよいのではないか、という気がしなくもない。なんせ裏返しなんだし<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>。このあたりから、展開にも簡約と同じくらい重要な役割があってもよいのではないか、という発想（妄想）が出てくる。</p>
+<p>で、いま、あらためて考えてみると、簡約はまあプログラムの時間的なふるまいをつかさどるものである。でもって、時間の裏返しといえば、それはまあ計算機科学者に尋ねたならばまずは空間なのであり、このあたりから、展開は、局所完全性は、プログラムの空間的なふるまいをつかさどるものなのではないか、というアイデアが浮かんでくる。</p>
+<p>そしてあらためて今回やったことをふりかえってみると、これはまさに展開を経由することでメモリの割り当てを、プログラムの空間的なふるまいを制御するものになっている。つまり今回の試行は、次のだいぶ危うげな対比にひとつの支えを与えるものとなっている：</p>
+<ul>
+<li>局所健全性はプログラムの時間的なふるまいを基礎づけるものである<br />
+</li>
+<li>局所完全性はプログラムの空間的なふるまいを基礎づけるものである ← NEW!</li>
+</ul>
+<p>……まあ私としても、ここがかなり妄言めいていることは承知している。「ΩΩΩ&lt;な、なんだってー！？」である。とはいえ本稿の出どころがこのあたりにあったってのもまた事実で、だからひとつの記録として書き残しておくことにした。ブログ感。</p>
+<h3>複製・破棄によるリソース管理を基礎づける</h3>
+<p>動機や位置づけについての話はここまでとしよう。ここでは本稿の手法のある側面に補足を与える。つまり、複製・破棄による路線にどのような根拠があるのかについて述べておく。</p>
+<p>簡約のふるまいを観察してみるところから話は始まる。λ計算における次のようなごく普通の簡約を例にとる：</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>   (λ x. (x, x)) @ &quot;hello&quot;</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>~&gt; (&quot;hello&quot;, &quot;hello&quot;)</span></code></pre></div>
+<p>説明のため、この簡約における前後のtermに名前を与えておく：</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>e1 := (λ x. (x, x)) @ &quot;hello&quot;</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>e2 := (&quot;hello&quot;, &quot;hello&quot;)</span></code></pre></div>
+<p>このとき上記の簡約はもちろん <code>e1 ~&gt; e2</code> となる。</p>
+<p>いま、GCを用いる純粋な言語において、ソースコードに <code>e1</code> というプログラムと <code>e2</code> というプログラムを書いたときの挙動を比較してみる。このとき、もちろん、上記の簡約に対応する計算がおこなわれるか否かにおいて、両者の挙動は異なったものになる。それはそうなのだが、しかし両者の差異はそれだけではない。すなわち次のような空間的な差異がある：</p>
+<ul>
+<li>ソースコードに <code>e1</code> を書いたときは、文字列 <code>"hello"</code> は一度作成されてしまえば <code>(x, x)</code> において共有される。つまり、 <code>e1</code> を簡約したあとの <code>("hello", "hello")</code> に相当する実行状態においては、第1成分と第2成分とが同一のメモリ領域（文字列 <code>"hello"</code> の先頭）を指示することになる。<br />
+</li>
+<li>ソースコードに <code>e2</code> を書いたときは、文字列 <code>"hello"</code> は、その2回の出現に沿って素直に2回作成される。</li>
+</ul>
+<p><code>e1</code> のほうでは文字列 <code>"hello"</code> は1つだけ作成されるのに対し、 <code>e2</code> のほうでは <code>"hello"</code> は2つ作成される。言い換えるなら、こうした実装の言語においては、 <code>e1 ~&gt; e2</code> という簡約の前後どちらのtermをソースコードに書くかによって、プログラムの空間的挙動が異なったものになる。これはすなわち簡約が空間についての計算結果を保存していないということである。</p>
+<p>では、β簡約が時間的な計算結果だけでなく空間的な計算結果も保存するよう要求してみるとどうなるか。このときには、 <code>e1</code> のほうにおいても <code>e2</code> と同じ数だけ文字列 <code>"hello"</code> が作成されなければなるまい。つまり2個である。そしてこの2というのはもちろん</p>
+<div class="sourceCode" id="cb47"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>λ x. (x, x)</span></code></pre></div>
+<p>のλ抽象の中に出現している <code>x</code> の数であり、したがって <code>e1</code> の挙動は、call-by-valueで考えるとして、</p>
+<ol>
+<li>まず引数 <code>"hello"</code> を評価するにあたってこれがメモリ領域に割り当てられ、<br />
+</li>
+<li>この文字列がλ抽象に渡され、<br />
+</li>
+<li>λ抽象のほうで変数 <code>x</code> の使用回数nに応じてこの文字列が複製あるいは破棄され、<br />
+</li>
+<li>そのうえで残りの処理をおこなう、</li>
+</ol>
+<p>といったものにならざるをえない。そしてこのときはたしかに、 <code>e1</code> を実行したときにも <code>"hello"</code> はちょうど2つ作成されることになる。こうしてリソースの複製・破棄に背景が与えられる。つまり、簡約が時間についての計算結果だけでなく空間についての計算結果も保つよう要求したときに自然と必要となってくるのが複製・破棄の路線である。</p>
+<h3>まともな性能を期待できるのか</h3>
+<p>ところで、酔いのさめた頭で考えるとして、変数を使用するたびにいちいちコピーが発生するなんてのはまあ狂気の沙汰である。無駄どころの騒ぎではない。CPUの人権侵害である。では、複製・破棄のアプローチは象牙の塔でだけ通用する話であって、およそ非現実的な代物である、というのがオチになるのかというと、これは案外そうでもない。象牙の塔にも隠し扉くらいはある。最適化である。</p>
+<p>というわけで以下で可能な最適化について3種類ほど書いていく。ここで一番おもしろいのはたぶん、それぞれの詳細よりもむしろ、これらリソースにかかわる性能云々の議論がすべてλ計算におけるtermの書き方についての議論に帰着されているという点である。既存のλ計算に手を加えることなしにその内部にリソース制御のための語彙をみつけている、ってところにアツさがある。</p>
+<p>容易に予想されるとおりベンチとかはないので話半分に聞いてもらえればと思う。</p>
+<h4>借用もどき</h4>
+<p>1つ目。freeされうるものを引数として受け取ったときは、それを返り値に含めましょう、という話。次のようなコードを考えてみる：</p>
+<div class="sourceCode" id="cb48"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>let str := &quot;hello&quot; in</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>let _ := print str in</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>let _ := print str in</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>print str</span></code></pre></div>
+<p>上記は <code>"hello"</code> と3回出力するコードである。ここで注目するべきは、変数 <code>str</code> が3回使用されていることである。それゆえ上記のコードにおいては <code>"hello"</code> の3つのコピーが作成されることになる。だいぶつらい。</p>
+<p>だが、この状況はちょっと考えてやれば回避できる。ポイントは <code>print</code> の型である。素朴にはこの型を <code>string -&gt; top</code> のようなものにしたくなるところだが、そうではなくて、 <code>string -&gt; string * top</code> とするのである。つまり <code>print</code> を、</p>
+<ol>
+<li>文字列 <code>s</code> を引数として受け取り、<br />
+</li>
+<li><code>s</code> を出力し、<br />
+</li>
+<li><code>s</code> と <code>top.unit</code> のペアを返す<br />
+</li>
+</ol>
+<p>という挙動のプリミティヴ関数として定める（このような <code>print</code> は <code>s</code> を2回使用しておきながらその複製をおこなわないというイレギュラーな挙動をもった関数、いわばズルであり、それゆえコンパイラ内部で定義される）。このような <code>print</code> を利用すれば、上記のコードは</p>
+<div class="sourceCode" id="cb49"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>let str := &quot;hello&quot; in</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>let (str1, _) := print str in</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>let (str2, _) := print str1 in</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>print str2</span></code></pre></div>
+<p>あるいは同じことだが、変数名をそろえて</p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>let str := &quot;hello&quot; in</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>let (str, _) := print str in</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>let (str, _) := print str in</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>print str</span></code></pre></div>
+<p>と書き換えられる。これによって <code>"hello"</code> の出力にともなう複製は回避されることになる。</p>
+<p>ちなみに上記のような、「引数として受け取ったものをそのまま返り値に同じ名前で含める」というのはどうやら頻出するパターンであるらしい。というわけで今回実装した言語においてはそれ専用の構文を用意してある。つまり、</p>
+<div class="sourceCode" id="cb51"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>let _ := print &amp;str in (...)</span></code></pre></div>
+<p>などと書くと、これは</p>
+<div class="sourceCode" id="cb52"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>let (str, _) := print str in (...)</span></code></pre></div>
+<p>へとパース時点で書き換えられるようにしてある（実際の構文はS式ベースなので微妙に異なるが、本質的には上記の通りである）。借用もどきとでも言ったところか。あんまり借用とか言ってしまうとC++とかRustとかのやつと言葉が衝突して微妙なのでひかえたほうがよさそうだが。</p>
+<p>なんにせよ、これを用いると、たとえば文字列を2回printするような関数は次のように定義されることになる：</p>
+<div class="sourceCode" id="cb53"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>let print_twice :=</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  λ str.</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>    let _ := print &amp;str in</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>    let _ := print &amp;str in</span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>    (str, top.unit)</span></code></pre></div>
+<h4>状態とshadowing</h4>
+<p>2つ目。いま、われわれの言語において状態の絡んだ計算を表現したいとして、どういった方針をとるのがよいかを考えてみる。もちろんλ計算の力を使って、たとえばstateモナドを用いるという手はある。けれどもここには一つ難点がある。stateモナドにおける <code>get</code> が通常どのように実装されるかを見てみよう：</p>
+<div class="sourceCode" id="cb54"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>let get :=</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>  λ s. (s, s)</span></code></pre></div>
+<p>ここで <code>s</code> の場所にくるのは状態である。たとえば <code>string</code> を状態としてもつようなstateモナドであれば、 <code>s</code> としては文字列が渡されることになる。こう見れば問題は明らかだろう。つまり、変数 <code>s</code> が <code>get</code> において非線形に（2回）使用されているため、 <code>get</code> を呼び出すたびに文字列のコピーが発生してしまうのである。状態を利用するたびに、状態がまるっとコピーされてしまう。これはさすがに悲劇である。できれば避けたい。というわけで、別な方法で状態を実現できないかと考えることになる。</p>
+<p>そしてそうした「別な方法」は実際に存在する。端的に言って、トップレベルの変数に対して上で見たようなshadowingによる最適化をほどこせば済む。具体例を示すのがよいだろう：</p>
+<div class="sourceCode" id="cb55"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>-- 状態を保持する変数を定義する</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>let str-state :=</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>  &quot;hello&quot; in</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>-- 状態sをうけとり、その状態のもとで計算をおこない、(更新された状態、top.unit)というペアを返す関数を定義する</span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a>let proc :=</span>
+<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a>  λ s.</span>
+<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a>    -- テキトーな計算</span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>    let _ := print &amp;s in</span>
+<span id="cb55-10"><a href="#cb55-10" aria-hidden="true" tabindex="-1"></a>    let s := concat s &quot;!&quot; -- 現在の状態（文字列）の末尾に &quot;!&quot; を追加する</span>
+<span id="cb55-11"><a href="#cb55-11" aria-hidden="true" tabindex="-1"></a>    let _ := print &amp;s in</span>
+<span id="cb55-12"><a href="#cb55-12" aria-hidden="true" tabindex="-1"></a>    (s, top.unit) in</span>
+<span id="cb55-13"><a href="#cb55-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-14"><a href="#cb55-14" aria-hidden="true" tabindex="-1"></a>-- トップレベルでさきほどの借用もどきを利用する</span>
+<span id="cb55-15"><a href="#cb55-15" aria-hidden="true" tabindex="-1"></a>let _ := proc &amp;str-state in</span>
+<span id="cb55-16"><a href="#cb55-16" aria-hidden="true" tabindex="-1"></a>-- 上記は let (str-state, _) := proc str-state と同じもので、だからこの時点でstr-stateは &quot;hello!&quot; になっている</span>
+<span id="cb55-17"><a href="#cb55-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-18"><a href="#cb55-18" aria-hidden="true" tabindex="-1"></a>-- もう一回利用してみる</span>
+<span id="cb55-19"><a href="#cb55-19" aria-hidden="true" tabindex="-1"></a>let _ := proc &amp;str-state in</span>
+<span id="cb55-20"><a href="#cb55-20" aria-hidden="true" tabindex="-1"></a>-- この時点でstr-stateは &quot;hello!!&quot; になっている</span>
+<span id="cb55-21"><a href="#cb55-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-22"><a href="#cb55-22" aria-hidden="true" tabindex="-1"></a>(...)</span></code></pre></div>
+<p>という具合である。 <code>get</code> の場合とちがって状態を保持する変数（この場合では <code>str-state</code> ）が線形に使用されているところ、状態を読むことができているところ、状態を書き換えることができている（かのように見える）ところに注目されたい。こうして余計なコピーを引き起こすことなく状態を利用することが可能になる。</p>
+<p>なんにせよ、原理的に上記のようにして状態管理が可能であるなら、あとは適当な構文糖衣を用意してやるだけの話である。それゆえ状態にともなうコピー祭りは回避できる。状態管理、くらりんり、君に聞こえるのは僕が知らない声になっていく。</p>
+<h4>対応するmalloc/freeの打ち消し</h4>
+<p>3つ目。静的にリソース管理が実現されるという点についてあらためて考えてみる。当たり前のことではあるが、このときは、コンパイルが終了した時点で、どこにmalloc/freeが挿入されるか、またmallocにおいて確保するべきメモリ領域のサイズはいくらか、といった情報がすでに得られていることになる。であるならば、コンパイル結果には、たとえば次のような疑似コードに相当するようなLLVMコードが含まれうることになる：</p>
+<div class="sourceCode" id="cb56"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>a := malloc(SIZE);</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>(...)</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>free(a);</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>b := malloc(SIZE);</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>(...)</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>free(b);</span></code></pre></div>
+<p>このとき、 <code>a</code> と <code>b</code> との <code>malloc</code> ではどちらも同サイズのメモリ領域を利用するのだから、不要になった <code>a</code> の領域を <code>b</code> で使い回すことができるはずである。つまり、上記のコードを</p>
+<div class="sourceCode" id="cb57"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>a := malloc(SIZE);</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>(...)</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>b := a;</span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>(...)</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>free(b);</span></code></pre></div>
+<p>に書き換えられるはずである。で、それは実際に可能で、この最適化処理は今回実装した言語のなかに組み込んである。</p>
+<p>これだけだとちょっとそっけないので、一言コメントを添えてみる。ベースの言語がλ計算ベースであることを思い出してもらうと、この言語に対し、コンパイル時点で簡約（インライン展開）をかなりゴリゴリと適用していけることが想像できると思う。でもって、インライン展開をおこなえばおこなうほどに、ひとまとまりのコード片（λ抽象の中身）のサイズは大きくなっていくはずで、ということは上記のような、サイズのそろったmalloc/freeのペアは見つかりやすくなっていく。というわけで、こちらの最適化はインライン展開とも相性のよいものとなっている。</p>
+<h4>性能についての総括</h4>
+<p>それで、これらの最適化が現実にどれくらいうまく機能するのか、まともな性能を期待できるのかだけど、正直言ってわからない。個人的には、上記のようにやれば線形λ計算で書ける範囲って案外広いんじゃないか、案外いけるんじゃないか、って気がしていたりもするのだが、こんなのはただの想像であって、どんなものによっても支えられておらず、どこにもたどりつかない。実際にフルの言語にしてプロファイルもとれるようにして、などとしてみたいところではあるが、即物的なあらゆるものが足りない。</p>
+<p>そういえば、関連する話として、マルチスレッドな挙動を考えたときにどうなるのかも気になるところではある。変数の書き換えを上記のようなshadowingでやるかぎりにおいて、たぶん複数スレッドのあいだで状態を送ったり受け取ったりといったことはできなくなると思うんだけど、それがどれくらいしんどいのか。</p>
+<p>Curry-Howard的な路線として、<a href="https://arxiv.org/abs/1802.00961">Gödelの公理などをもちいて複数スレッド間でデータを受け渡したりするような研究</a>もあるみたいで、どうしても証明論的に状態を共有したいのであればこっちの路線を調べていくことになるのかもしれない（Gödelの公理ってのは <span class="math inline">\( (A \to B) \lor (B \to A) \)</span> ってやつ）。しかし当該の論文における簡約はかなり込み入ったものとなっていて、まだそのままではちょっとあつかいづらいように見える。どうしたもんでしょ。現実的には、怪しげな定数を入れてやってそっちにマルチスレッドな挙動のためのズルを詰め込むとか、そういう路線になるのだろうか。よくわからない。</p>
+<h3>その他のあれこれ</h3>
+<p>落ち穂拾い。やってないことなどについて。</p>
+<h4>安全性の話</h4>
+<p>まず、記事冒頭にも書いたが、この手法がなんらかの意味において正当、あるいは安全であることの証明はまだない。時間的資源とかのあれこれを天秤にかけた結果である。</p>
+<p>安全性についてひとつふれておくべきことがあるなら、Russellのパラドックスにかかわるものだろうか。今回の論理体系は <code>Type : Type</code> を認めており（あるいはまた不動点演算子を含んでおり）、それゆえもちろん矛盾している。つまり任意の型 <code>A</code> に対し、その型をもつような証明項 <code>e</code> が存在する。他方で本稿のリソース管理システムは型/命題ありきのものとなっているのだった。であるならば、この矛盾を利用しておかしな型をつくってやればリソース管理システムを破壊できるのではないか、という疑問がありうる。</p>
+<p>が、実際にやってみるとわかるが、これはたんに <code>e</code> の実行が無限ループに陥るだけの話である。 <code>Type : Type</code> を認めているからといって、たとえば突然 <code>"hello" : int</code> のような型判断が通るようになったりはしない。 <code>Type : Type</code> や <code>fix</code> を利用することで任意の命題 <code>A</code> に対してその証明 <code>e : A</code> を構成するとき、この <code>e</code> はなお一定のパターンにしたがっているのであり、いわばこうした体系は秩序をもって矛盾しているのである。……例によって証明はないが。</p>
+<p>あ、もちろん無限ループからスタックオーバーフローを経由してセグフォを引き起こすことはできる。Cとかと同じように。</p>
+<h4>表示的意味論どこ？</h4>
+<p>詳しい人が見ればゼロコンマ2秒で分かる通り、本稿の話は統語論というか証明論にかなりかたよったものであって、表示的意味論の話がまったく含まれていない。実際のところ、型を特定の関数へと変更するというのは結構おもしろい気がしていて、その圏論的意味論からみたふるまいも気になるところではあるのだが、残念なことにいまのところ私は依存型の圏論的意味論をよく知らない。「無敵のfibrationってやつでなんとかしてくださいよ〜」くらいの知識しかない。つまりなにも知らないということである。</p>
+<h4>理論的整備がまだまだですねという話</h4>
+<p>上の話とも関連するが、まあ理論的整備がぜんぜんである。祈りに近い。正しくブログ記事という感じではあるが。ややテクニカルな話をすると、今回つくったコンパイラがやっていることは、おおむね</p>
+<ol>
+<li>Calculus of Constructionsとよばれる体系からスタートする（ユーザがソースコードに書くやつはこれ）<br />
+</li>
+<li>当該の体系をCall-By-Push-Value (CBPV)の依存型バージョンと変換する<br />
+</li>
+<li>dependent CBPVに対してクロージャ変換をおこなってすべてのλ抽象をclosedにする<br />
+</li>
+<li>型の計算論的解釈によってリソースの線形化処理をおこなう<br />
+</li>
+<li>得られた情報を利用しつつ普通のコンパイラと同じようなノリで仮想マシンコードを生成</li>
+</ol>
+<p>という処理の組み合わせとして理解できるのだが、ここでのそれぞれの変換を具体的に書き下すという作業をおこなっていない。なんなら依存型バージョンのCBPVがぶっこわれていないことをチェックしてすらいない。一般に言って、いけそうな思い付きというのはきちんと定式化してやるとたいていどこかしらバグっているものであり、それは今回の話についてもむろん例外ではあるまい。どっかしらぶっ壊れているかもしれない<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a>。</p>
+<h4>名前のこと</h4>
+<p>どうでもいいが（と書くとき本当にどうでもいいと思っていることがはたしてどれくらいあるのだろうか）、せっかくなので今回書いた言語の名前について一言添えておく。今回の言語の名前は "neut" としてみたわけだが、私は別に、たとえばこの言語はなんらかの意味において中立的なものであるのだぞとか、そうした思いを持っているわけではない。というか「自然演繹大好き～♡」って立場を採用している時点でもう思いっきりopinionatedだし。むしろ、これはたんに実装の内部からきた名前である。</p>
+<p>上でも軽くふれたとおり、今回の言語のコンパイルの過程においては、直観主義のλ計算 (Calculus of Constructions) をCall-By-Push-Value (CBPV) という計算体系へと変換する処理が含まれている。CBPVと普通の体系との差異は、前者において型が大きく2種類に分かれるという点に求められる。より具体的には、CPBVにおいては、型が「値の型」と「計算の型」に分かれる。値のほうはふつうpositiveであるとされ、また計算のほうはふつうnegativeであるとされる。つまり言語に極性 (polarity) が入っている。たとえばCBPVにおける「<span class="math inline">\( \to \)</span>」の導入則はつぎのようになる：</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma, x : P \vdash e : N \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x.e : P \to N \)}
+\end{prooftree}
+\]</span></p>
+<p>ここで <span class="math inline">\( P \)</span> というのはpositiveな型であり、 <span class="math inline">\( N \)</span> というのはnegativeな型である。λ抽象の引数はつねにpositiveでなければならず、また関数本体はつねにnegativeでなければならない、といった具合で、特に <span class="math inline">\( P \to N \)</span> それ自体はnegativeな型であり、ゆえにたとえばλ抽象をそのまま別のλ抽象に引数として与えることができなくなっていたりする。</p>
+<p>線形論理がリソースについて論理をより詳しく分析するものであると言うなら、CBPVは簡約について論理をより詳しく分析するものであると言ってみてもよいかもしれない（ちょっと乱暴かもしれないが）。もうすこし詳しいことについては<a href="https://www.cs.cmu.edu/~fp/courses/15816-f16/lectures/21-cbpv.pdf">このへん</a>をみてもらえればと思う。当該の講義資料は自然演繹についての基本的なことを知っていれば読めるはずである。CBPVを作った/発見した人であるところの<a href="https://www.cs.bham.ac.uk/~pbl/papers/thesisqmwphd.pdf">Levy本人による博士論文</a>はより詳細であるが、いきなりだとなかなか近寄りがたいかもしれない。</p>
+<p>なんにせよ、ポイントは、コンパイルの過程においてユーザの入力がpositiveな断片とnegativeな断片とに極化されるというところである。逆に言えば、ユーザが書いたプログラムにはまだ極性が入っておらず、そのかぎりにおいてneutralである。ユーザがソースコードに書くのはneutralな証明項である。というわけで、ちょうどテキストファイルに書かれるのがテキストで、その拡張子が ".txt" となるように、neutral termを書くファイルの拡張子は ".neut" とすることにし、これをそのまま言語の名前として用いることにしてみた。それだけの話でした。</p>
+<h2>跋</h2>
+<p>対ありでした〜</p>
+<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p>もしかすると、この制限はなんだか突然どこからともなく降ってきた恣意的なものに見えるかもしれない。が、これは実際には直観主義論理を考えるかわりに線形論理で考えてみるという「よくある」分析に沿ったものとなっている。こういう分析について書いてある文献としては照井先生の<a href="http://www.kurims.kyoto-u.ac.jp/~terui/birth.pdf">これ</a>が個人的におすすめ。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2" role="doc-endnote"><p>ややテクニカルな注釈を添えておく。線形論理からスタートして直観主義論理の表現能力を得ようと思ったなら、まず考えつくのはexponentialの様相を使うことだろうが、こちらの方針ではうまくメモリを静的に管理することができない（と思う）。というのは、S4の様相と同様の仕方でこのexponentialの様相を入れ、さらにその様相をもつもの（つまり <code>!A</code> という形の型を持つもの）に対してweakening / contractionを認めたとき、当該の論理体系はけっきょく <code>!A</code> という形の型だけが出現するようなフラグメントとして実質的に直観主義論理をそのまま含むことになってしまうからである。最初の「直観主義論理ベースな計算体系のメモリってどうやって管理するの？」の問題に戻ってきてしまう。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3" role="doc-endnote"><p>あるいは、ここで次のような疑問を抱くかもしれない。つまり、型のなかに自由変数が含まれていたらどうするのか、という疑問である。結論から言うと、こうした状況には自由変数の概念を拡張することによって対応する。つまり、自由変数の型の中に含まれる自由変数もまた、もとのtermの自由変数として数え入れるのである。たとえば、</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>λ (A : Type). λ (x : A -&gt; int). (x, 100)</span></code></pre></div>
+<p>のようなtermがあったとする。このとき、 <code>(x, 100)</code> の自由変数は、普通はたんに <code>x</code> だけであるとされる。が、ここでは、 <code>x</code> の型であるところの <code>A -&gt; int</code> が自由変数として <code>A</code> を含んでいるので、この <code>A</code> もまた自由変数として数え入れられることになる。他方、 <code>A</code> の型であるところの <code>Type</code> には自由変数は含まれないので、けっきょく、 <code>(x, 100)</code> の自由変数は <code>A, x</code> である、となる。このようにすることで、自由変数をコピーするための型の情報がすべてクロージャの第1成分に入ってくることになる。これによってクロージャがうまくコピーできるようになる。<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4" role="doc-endnote"><p>クロージャ変換のこの3要素への拡張は本質的にはただの存在量化である。親しみ深い存在量化は、 <code>x + 1 = 0</code> のような自由変数をもった主張から始めて、ここから <code>exists (x : Integer). x + 1 = 0</code> のような命題をつくり、いわば変数 <code>x</code> の部分を匿名化するものであった。上でやっているのも同じことで、つまり、もともとクロージャ</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>({自由変数のあつまり},</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a> λ (もとの引数, env).</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>   let (自由変数だったものたちの名前) := env in</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>   {もとのコード})</span></code></pre></div>
+<p>の型（= 命題）は</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>(A1, ..., An) * {...}</span></code></pre></div>
+<p>であるわけだが、この第1成分のほう、自由変数の具体的な型のありようを存在量化で匿名化して、</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>Sigma (A : Type). A * {...}</span></code></pre></div>
+<p>としているのがここでの変換である。この変換によって、もともと型のほうに入っていた <code>(A1, ..., An)</code> の情報がクロージャの第1成分というterm側に降りてきているところがポイントである。</p>
+<p>ところで、このような、クロージャを3成分に拡張する手法は特に新しいものではないらしい。実際、これが本題というわけではないが、<a href="https://github.com/u2zv1wx/neut/issues/1">githubリポジトリのissue</a>で<a href="https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf">紹介された論文</a>でも同じようなことをやっているとのことであり（まだ読んでいないが）、また簡単に調べてみただけでも、<a href="https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf">1996年時点ですでに似た話がある</a>ように見える。というわけで、いろいろ困ったことになるのは避けたいので、クロージャのこの3要素による変換について、本稿は特にこれといってオリジナリティを主張しない。<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5" role="doc-endnote"><p>当該のコンパイラにおいては、実際には既存コードをなるべく効率的にコンパイルするべくGCが同時に利用されていたりする。が、これはあくまでひとつの最適化であると理解しておけばよかろう。<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6" role="doc-endnote"><p>ここでの話は、最後の与太話を除いて<a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">こちらの論文</a>をベースにしたものになっている。<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7" role="doc-endnote"><p>もうすこし正確には、除去則の結論を、導入則の前提、および除去則の追加の仮定から証明するという操作である。つまり、たとえば <span class="math inline">\( \to \)</span> の除去則では</p>
+<p><span class="math display">\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_{\mathsf{e}}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]</span></p>
+<p>のように <span class="math inline">\( A \to B \)</span> と <span class="math inline">\( A \)</span> が前提としてとられるが、これでいうところの <span class="math inline">\( A \)</span> が「除去則の追加の仮定」である。「<span class="math inline">\( \land \)</span>」の例ではここが0個になっている。<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8" role="doc-endnote"><p>もっと言うと、<a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">両者は随伴におけるtriangle identitiesのそれぞれに対応している</a>ようである。<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9" role="doc-endnote"><p>そういえば、型に副作用があったらどうするのか、という疑問がありうる。これについては選択肢は少なくとも2つある：</p>
+<ol>
+<li>言語を純粋にしてそもそも副作用が絡んでいるときには型検査を通過しないようにする<br />
+</li>
+<li>型検査は通過させて動作を未定義にする</li>
+</ol>
+<p>前者の路線では、たとえば <code>print</code> の型を <code>string -&gt; io (string * top)</code> などとしておく。こうしてやると、 <code>print</code> を利用しているような型の型は <code>Type</code> ではなく <code>IO Type</code> となってくれるわけで、それゆえ <code>A : IO Type</code> となるとき <code>A</code> は型ではなくなる。というわけでこうした <code>A</code> をたとえば関数の型の内部で <code>A -&gt; int</code> のようにして使用することはできなくなり、秩序が得られる。</p>
+<p>後者の路線では「型にわけのわからんものを書いたお前が悪い」の一言ですべてを終了させる。ちなみに今回の言語ではこちらの路線を採用してある。<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+        </main>
+        <footer>
+            <p>
+                <span class="metadata">
+                    <a href="https://twitter.com/ricotie">twitter</a>
+                    /
+                    <a href="https://github.com/vekatze">github</a>
+                    /
+                    <a href="https://github.com/vekatze">email</a>
+                </span>
+            </p>
+        </footer>
+        
+    </body>
+</html>

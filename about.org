@@ -1,0 +1,15 @@
+---
+title: about
+---
+
+タイトルは字面が好きな文字をならべただけ。
+
+contact me at:
+
+- vekatze@icloud.com
+- [[https://github.com/vekatze][GitHub]]
+- [[https://twitter.com/ricotie][Twitter]]
+- [[monero:4B8pz5KokF62tMREEYZ4eEhNVWxhXMVcADXvo7Anp6VRW4KGqstCdHMjZ3xyW7UutYbvdce3NYQNyT7LcNf3qr7R5GNxZoE][monero]]
+
+# - [[./key.txt][public key]]
+# - [[bitcoin:bc1q689xghadqlrvn05w0hzkm6tswlc8py7nrtqz76][bitcoin]]

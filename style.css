@@ -1,0 +1,114 @@
+:root {
+    --serif: Times, serif;
+    --sans-serif: Helvetica Neue, sans-serif;
+    --monospace: Menlo, Consolas, Source Code Pro, monospace;
+    --plyr-font-family: var(--monospace);
+    --plyr-font-size-small: 10px;
+    --plyr-audio-controls-background: #f6f6f6;
+    --plyr-tooltip-color: #fff;
+    --plyr-tooltip-background: #666;
+    --plyr-color-main: #666;
+    --plyr-range-track-height: 2px;
+    --plyr-audio-progress-buffered-background: #ccc;
+    --plyr-control-icon-size: 14px;
+    --plyr-control-radius: 2px;
+    --plyr-control-spacing: 6px;
+}
+
+body {
+    line-height: 1.6em;
+    overflow-y: scroll;
+    max-width: 700px;
+    min-width: 250px;
+    margin: 0 auto;
+    padding: 2em;
+    font-family: var(--serif);
+    background-color: #fff;
+    color: #000;
+}
+
+a, a:visited {
+    color: #06c;
+}
+
+a:hover {
+    background-color: #cef;
+}
+
+a:active {
+    color: #e70;
+    background-color: #fec;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.6em;
+}
+
+main, footer {
+    border-top: 1px solid #ccc;
+}
+
+img {
+    max-width: 100%;
+}
+
+hr {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    border: none;
+    height: 1px;
+    background-color: #ccc;
+}
+
+pre {
+    line-height: 1.6em;
+    white-space: pre-wrap;
+}
+
+figure, blockquote, div.sourceCode {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+div.sourceCode, blockquote {
+    padding: 0 1em;
+    word-wrap: break-word;
+}
+
+p code, li > code, figcaption > code {
+    padding: 0.2em 0.4em;
+}
+
+div.sourceCode, blockquote, p code, li > code, figcaption > code {
+    border: 1px solid #ccc;
+    background-color: #f6f6f6;
+    font-size: 90%;
+}
+
+section.footnotes {
+    font-size: 80%;
+}
+
+span.metadata {
+    font-family: var(--monospace);
+    font-size: 80%;
+    color: #999;
+}
+
+mjx-container {
+    overflow-x: auto;
+}
+
+#audio-player {
+    border: 1px solid #ccc;
+   width: 100%;
+}
+
+a.plyr__control {
+    color: var(--player-audio-control-color);
+}
+
+img.cover {
+    width: 100%;
+    vertical-align: bottom;
+}

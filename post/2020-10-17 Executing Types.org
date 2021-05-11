@@ -1,0 +1,1658 @@
+---
+mathjax: on
+---
+
+#+OPTIONS: H:6
+
+I was looking for a language that satisfies all of the following:
+
+1. Its type system is static and strong enough
+2. It corresponds to the ordinary lambda calculus
+3. Its memory management is determined at compile-time
+
+
+Such a thing can't be found easily, of course. The third condition is notably problematic. If we consider only the first two, we immediately reach our happy ending by simply holding hands with garbage collection. I'll be in a peaceful life with OCaml, Haskell, or F# in this case. When we consider the third one, however, the plot gets twisted.
+
+
+In the end, [[https://github.com/u2zv1wx/neut][I implemented such a language by myself]]. A dependently-typed programming language with static memory managemement that doesn't rely on additional annotations to its type system. It seemed to me that the method that I found to pass the third condition was interesting by itself, and that's why I decided to introduce it in this article.
+
+
+Getting straight to the point, the method is something that "executes types." Or, more specifically, the method converts a type into a function that copies / discards the values of the type. I emphasize here that I do love all of the GC-based approaches, the region-based approaches, and the manual approach that we see in C. All of them in their own ways. Be that as it may, I think the approach that I present in this article is interesting as a possibility.
+
+
+Some notes:
+
+
+- This article doesn't contain any safety guarantees. Obviously I agree that those guarantees would make this article 100 times better. This omission is simply due to my limited resource. I suggest you take this article as an implication or something like that, with a grain of salt.
+- I chose to write the motivation and the background in the appendix; The main part focuses on describing the point of the method as quickly as possible. You can visit the appendix to fully enjoy the virtue of the method.
+- This article should be read by anyone who knows OCaml, Haskell, or a language that is similar to them. If it isn't, it's simply my fault.
+
+
+
+Let's move on to the main part. It starts by constructing a small language with desirable properties.
+
+** Index
+:PROPERTIES:
+:TOC: :include siblings :depth 2 :ignore (this)
+:ID: toc
+:END:
+:CONTENTS:
+1. [[#exploiting-the-power-of-linearity][Exploiting the power of linearity]]
+  1. [[#a-language-that-uses-every-variable-just-once][A language that uses every variable just once]]
+  1. [[#resource-management-under-linearity][Resource management under linearity]]
+  1. [[#smuggling-non-linearity][Smuggling non-linearity]]
+1. [[#executing-types][Executing Types]]
+  1. [[#finding-vocabulary-for-resource-management-in-the-target-language][Finding vocabulary for resource management in the target language]]
+  1. [[#how-types-are-translated-more-concretely][How types are translated, more concretely]]
+  1. [[#how-translated-types-are-utilized][How translated types are utilized]]
+  1. [[#a-short-break-at-the-end][A short break at the end]]
+1. [[#appendix][Appendix]]
+  1. [[#a-highly-accelerated-introduction-to-natural-deduction][A highly-accelerated introduction to natural deduction]]
+  1. [[#motivation-from-proof-theory-or-the-ice-cold-correspondence][Motivation from proof theory, or the ice-cold correspondence]]
+  1. [[#computational-significance-of-local-completeness][Computational significance of local completeness]]
+  1. [[#a-foundation-for-the-resource-management-via-copydiscard][A foundation for the resource management via copy/discard]]
+  1. [[#can-we-expect-acceptable-performance-from-this-approach][Can we expect acceptable performance from this approach?]]
+  1. [[#miscellaneous][Miscellaneous]]
+1. [[#afterword][Afterword]]
+:END:
+
+** Exploiting the power of linearity
+*** A language that uses every variable just once
+
+It would be a straightforward idea to think about a simpler language before we dive into a fully-equipped one. Let's take that way here, too.
+
+
+We can restrict a programming language in various ways. Here, we add a restriction on the use of variables. More specifically, we consider a programming language like OCaml or Haskell, with the following additional property: every variable is used exactly once. Such a use of a variable is called to be "linear."
+
+
+Let's call our language L^{-}. The next pseudo-code, for example, should be valid in L^{-}:
+#+begin_src txt
+let x := 100 in
+let y := 1 in
+add x y
+#+end_src
+Note that both of the variables ~x~ and ~y~ are used linearly. On the other hand, the following pseudo-code should be invalid:
+#+begin_src txt
+let x := 100 in
+add x x
+#+end_src
+This is because the variable ~x~ is used twice in ~add x x~. Also, the next code:
+#+begin_src txt
+let x := 100 in
+10
+#+end_src
+should be invalid since the variable ~x~ is not used. Or, assuming that a function ~increment~ is defined beforehand, the next pseudo-code should be invalid, again:
+#+begin_src txt
+let x := 100 in
+let y := increment x in
+add x y
+#+end_src
+We can easily check that the variable ~x~ is used twice in total (~increment x~ and ~add x y~). The ~x~ is already consumed at ~increment x~, and thus we can no longer use it at the point of ~add x y~, so to speak.
+
+
+Of course, imposing linearity to every variable is really a demanding restriction. We won't be able to write a real program in a language with such a restriction. We will, however, see how this restriction can be bypassed soon, so we don't have to worry about the problem of expressivity now.
+
+*** Resource management under linearity
+
+Here we assume that the language L^{-} consists of variables, lambda-abstractions, function applications, and ~let~. We omit arrays like ~[1, 2, 3]~, or integers like ~100~ that we see above. This is because what we see below can be applied essentially as it is to those omitted constructs; We omit them so as not to make the text needlessly long.
+
+
+Let's think about realizing static resource management in our language L^{-}. Then we can easily find the following immediate solution.
+
+
+We allocate memory when and only when we process lambda-abstraction. For example, let's consider the following code:
+#+begin_src txt
+let f := λ y. (some computation) in
+(remaining computation)
+#+end_src
+The code should behave as follows:
+1. Allocates a piece of memory to express ~λ y. (some computation)~,
+2. Writes information of the lambda-abstraction (this information is represented by a tuple like ~(info-1, ..., info-n)~, and referred to as "closure"),
+3. Binds a pointer to the region to ~f~,
+4. Executes ~(remaining computation)~.
+This behavior shouldn't be much different than that of an ordinary language.
+
+On the other hand, we deallocate memory when and only when we process function application. For example, let's consider the following code:
+#+begin_src txt
+(some computation) in
+f a
+#+end_src
+The code should behave as follows:
+1. Executes ~(some computation)~,
+2. Extracts ~info-1~, ..., ~info-n~ from the variable ~f~,
+3. Deallocates the tuple ~(info-1, ..., info-n)~,
+4. Calls the appropriate function with ~a~ as its argument.
+
+
+The memory management defined above is safe. It also deallocates all the resources that are allocated during program execution. This is thanks to of the linearity of the language; Firstly, by the linearity, every lambda-abstraction is used exactly once. This means, of course, that every lambda-abstraction is used at most once, and at least once. Since they are used (applied) at most once, a lambda abstraction is deallocated at most once. This guarantees the property "a deallocated resource won't be deallocated again." Also, since they are used (applied) at least once, a lambda abstraction is deallocated at least once. This guarantees the property "every lambda abstraction is deallocated."
+
+
+All in all, the language L^{-} can realize static memory management by the interpretation above. The language already has our desired property. In the next section, we look for a way to enhance the expressivity of this language, keeping the charming property intact.
+
+*** Smuggling non-linearity
+
+We need loopholes against linearity, and nothing prevents us from injecting them into our language. Let's add the constants below for any type ~A~:
+- ~copy_A : A -> A * A~
+- ~discard_A : A -> top~
+
+
+Here, the ~A * A~ is the type of a pair that consists of two values of type ~A~. The ~top~ is so-called unit type. A little thought makes us realize that these constants can be used to bypass the restriction of linearity. Consider the following invalid code:
+#+begin_src txt
+let x := 1 in
+add x (add x x)
+#+end_src
+The code above can be rewritten using those constants:
+#+begin_src txt
+let x := 1 in
+let (x1, tmp) := copy_int x in
+let (x2, x3) := copy_int tmp in
+let (add1, add2) := copy_(int->int->int) add in
+add1 x1 (add2 x2 x3)
+#+end_src
+The code is now valid as a code in the language L^{-}. Or, consider the following:
+#+begin_src txt
+let x := 100 in
+10
+#+end_src
+Similarly, this can be rewritten as follows:
+#+begin_src txt
+let x := 100 in
+let () := discard_int x in
+10
+#+end_src
+In both cases, the resulting code uses every variable lineary thanks to ~copy~ or ~discard~. More generally, if a variable ~x~ of type ~A~ is used for n times,
+
+- if n < 1, we can use ~discard_A~ to make the use of ~x~ linear.
+- if n = 1, the use of ~x~ is already linear.
+- if n > 1, we can use ~copy_A~ to make the use of ~x~ linear.
+
+
+This recovers the expressivity that once was diminished by the imposition of linearity. Also, since we didn't touch the behavior of the language, only these constants are peculiar from the viewpoint of resource management. Thus now we just have to consider how these constants can be realized using other language constructs, assuming that it is possible[fn:modal].
+
+
+** Executing Types
+
+As quickly mentioned in the preface, we can use types to realize static resource management, or to implement those constants. In this section, firstly we see the basic idea of how to utilize a type for resource management. Next, we see how various types are translated to realize ~copy_A~ and ~discard_A~ under the idea. Finally, we see how those results of the translation are utilized.
+
+*** Finding vocabulary for resource management in the target language
+
+Let's see the basic idea by an example. Consider we have a term ~e~ of type ~A * B~. In this situation, we can expand ~e~ as follows, without knowing the internal construction of ~e~ is:
+#+begin_src txt
+let (x, y) := e in (x, y)
+#+end_src
+
+Such a expansion is often referred to as an η-expansion. This operation keeps the meaning of a term (as long as the ~e~ doesn't contain any effects):
+#+begin_src txt
+   let (x, y) := ("foo", (3, true)) in (x, y)
+~> ("foo", (3, true))
+#+end_src
+
+
+Now, the point here is that we can perform this expansion to ~e~ by knowing only the type of ~e~. We don't have to care about how ~e~ is actually constructed. This means that we can turn the operation of η-expansion for ~A * B~ into a function:
+#+begin_src txt
+λ z.
+  let (x, y) := z in
+  (x, y)
+#+end_src
+
+The virtue of this function is that it allows us to inspect the internal structure of ~e~ by using the variables ~x~ and ~y~. It allows us to trace the content of ~e~. Now, using this η-expansion as a reference, let's suppose that we can define a translation ~Expand(_)~ that turns a type into a function that traces the terms of the type. ~Expand(A * B)~ should be something like this:
+#+begin_src txt
+λ z.
+  let (x, y) := z in
+  let x' := Expand(A) x in
+  let y' := Expand(B) y in
+  (x', y')
+#+end_src
+If we can define this ~Expand(_)~ to other types, we should be able to trace every term recursively.
+
+
+Of course, even if we can define such ~Expand(_)~, it doesn't mean that we can copy/discard resources. It only means that we can now propagate η-expansion to a term, so to speak. The problem of copy/discard is, however, almost solved already. For example, let's suppose that we can define a translation ~Copy(_)~ that turns a type into the corresponding "copy" function of the type. Now we can define ~Copy(A * B)~ as follows:
+#+begin_src txt
+λ z.
+  let (x, y) := z in
+  let (x1, x2) := Copy(A) x in
+  let (y1, y2) := Copy(B) y in
+  ((x1, y1), (x2, y2))
+#+end_src
+This function is indeed of type ~A * B -> (A * B) * (A * B)~. Or, let's suppose that we can define a translation ~Discard(_)~ that turns a type into the corresponding "discard" function. Again, ~Discard(A * B)~ can be defined as follows:
+#+begin_src txt
+λ z.
+  let (x, y) := z in
+  let () := Discard(A) x in
+  let () := Discard(B) y in
+  ()
+#+end_src
+This function is of type ~A * B -> top~.
+
+
+After all, the core idea is to implement ~copy_A~ and ~discard_A~ by extending the functionalized η-expansion into "the power of n". To give such a computational interpretation to types. To translate a type ~A~ into the pair ~(copy_A, discard_A)~ and extract the required element from this pair and use it to turn a non-linear code into a linear one. The repository that we see in the preface is an implementation of this idea.
+
+
+Incidentally, in its actual implementation, a type ~A~ is translated into not the pair of ~copy_A~ and ~discard_A~, but the following 2-ary function ~exp_A~:
+#+begin_src txt
+λ flag z.
+  if flag
+  then discard_A z
+  else copy_A z
+#+end_src
+This ~exp_A~ is used as follows:
+#+begin_src txt
+-- to discard x : A
+let () := exp_A true x in
+(...)
+
+-- to copy x : A
+let (x1, x2) := exp_A false x in
+(...)
+#+end_src
+
+This is just an implementation-level optimization. This isn't expressivity-related stuff. By adopting this, a type is translated into a closed function, not a pair. Since a closed function is represented as a simple function pointer, it can be copied/discarded just in the same way as an immediate value like an integer. Thus we can copy/discard the result of the translation of a type as if it were an integer. This omits tedious allocations/deallocations that would've been necessary if we had taken the other approach. Our approach is also preferable from the viewpoint of performance. That's why I chose this approach in the actual implementation.
+
+*** How types are translated, more concretely
+Here, we see how ~copy~ and ~discard~ are defined for various types.
+
+**** Immediate
+On immediate types like ~int~. We can define ~copy~ and ~discard~ for them as follows:
+#+begin_src txt
+let copy_int :=
+  λ x. (x, x)
+
+let discard_int :=
+  λ x. ()
+#+end_src
+Since the argument of ~copy_int~ and ~discard_int~ are immediate, it can be copied/discarded without any memory operations. Thus we can use the argument in non-linear manner. The allocating operation for ~(x, x)~ is the only memory-related operation in these functions.
+
+**** Array
+On array types like ~int[3]~ (Here we assume that every value of an array is immediate). We can define ~copy~ and ~discard~ as follows:
+#+begin_src txt
+let copy_int_3 :=
+  λ x.
+    let [a, b, c] := x in
+    ([a, b, c], [a, b, c])
+
+let discard_int_3 :=
+  λ x.
+    let [a, b, c] := x in
+    ()
+#+end_src
+That is, we can extract values from ~x~ and then construct a new array. Here, the meaning of
+#+begin_src txt
+let [a, b, c] := x in (...)
+#+end_src
+is assumed to be something like this:
+1. binds all the elements to ~a~, ~b~, and ~c~,
+2. deallocates the array ~x~.
+Thus, the behavior of ~copy~ is, for example, as follows:
+1. binds all the elements of ~x~ to ~a~, ~b~, and ~c~
+2. deallocates ~x~
+3. allocates a piece of memory for ~[a, b, c]~ (the first time)
+4. writes ~[a, b, c]~ to the memory region (the first time)
+5. allocates a piece of memory for ~[a, b, c]~ (the second time)
+6. writes ~[a, b, c]~ to the memory region (the second time)
+7. allocates a piece of memory for ~([a, b, c], [a, b, c])~
+8. writes ~([a, b, c], [a, b, c])~ to the memory region
+Note that we can copy ~a~, ~b~, and ~c~ without any additional operations since they are immediate.
+
+**** Type of Types
+
+The ~Type~ in ~A : Type~ is also a type, and thus it is something to be translated. It can be, however, treated in the same way as an immediate thanks to the optimization that we've seen. Thus, we can define the ~copy~ and ~discard~ for the type of types simply as follows:
+#+begin_src txt
+let copy_type :=
+  λ x. (x, x)
+
+let discard_type :=
+  λ x. ()
+#+end_src
+
+**** Function
+On function types like ~int -> bool~. This is a little complicated. You might want to skip this if you just want to catch the general drift. Anyway, we need to see how a lambda-abstraction is translated to explain the behavior of a function type. Consider the following code.
+#+begin_src txt
+let f :=
+  let b := true in
+  let y := 10 in
+  λ x. x + (as-int b) + y in
+(...)
+#+end_src
+Here, ~as-int~ is a function that (for example) translates ~true~ to ~1~, and ~false~ to ~0~, respectively.
+
+The code above contains a lambda abstraction ~λ x. x + (as-int b) + y~ that has ~b : bool~ and ~y : int~ as its free variables. In an ordinary programming language, such a lambda-abstraction is translated into the following pair:
+#+begin_src txt
+((b, y),
+  λ (x, env).
+    let (b, y) := env in
+    x + (as-int b) + y)
+#+end_src
+That is, a pair of the following form:
+#+begin_src txt
+({the set of all the free variables},
+ λ ({the original arguments}, env).
+   let (the names of the free variables) := env in
+   {the original code})
+#+end_src
+
+This translation is referred to as closure conversion. In our system, we extend this procedure; We translate the lambda abstraction into the following 3-tuple:
+#+begin_src txt
+(bool * int,
+ (b, y),
+  λ (x, env).
+    let (b, y) := env in
+    x + (as-int b) + y)
+#+end_src
+
+That is, we attach the type information of the free variables[fn:closedchain]. With this information, we can easily copy/discard a closure. Indeed, for every element of a closure,
+- ~bool * int~ can be copied/discarded as an immediate since it is a type.
+- ~(b, y)~ can be copied/discarded using ~bool * int~.
+- the third element can be copied/discarded as an immediate since it is a function pointer to a closed function.
+This realizes the ~copy~ and ~discard~ of a closure[fn:depcls].
+
+
+After all, the ~copy~ and ~discard~ for a function type like ~int -> bool~ are defined as follows:
+#+begin_src txt
+let copy_closure :=
+  λ cls.
+    let (env_type, env, func) := cls in
+    let (env1, env2) := env_type false env in
+    ((env_type, env1, func), (env_type, env2, func))
+
+let discard_closure :=
+  λ cls.
+    let (env_type, env, func) := cls in
+    let () := env_type true env in
+    ()
+#+end_src
+Here, the behavior of
+#+begin_src txt
+let (x1, ..., xn) := x in (...)
+#+end_src
+is assumed to be something like:
+1. binds all the elements of ~x~ to ~x1~, ..., ~xn~,
+2. deallocates ~x~
+
+
+
+*** How translated types are utilized
+
+Finally, let's see how these results of the translation are utilized to linearize given code. Consider the following function:
+#+begin_src txt
+let to-pair :=
+  λ (A : Type) (x : A). (x, x)
+#+end_src
+This function ~to-pair~ is something that is used in the following way:
+#+begin_src txt
+to-pair int         3              # ~> (3, 3)
+to-pair string      "hello"        # ~> ("hello", "hello")
+to-pair (bool * top) (false, unit) # ~> ((false, unit), (false, unit))
+#+end_src
+~to-pair~ is a polymorphic function that creates the pair of the given argument.
+
+
+As you can see, the variable ~x~ is used twice in the definition of ~to-pair~. This non-linear ~x~ is linearized using ~A~ essentially as follows:
+#+begin_src txt
+let to-pair :=
+  λ A x.
+    let (x1, x2) := A false x in
+    (x1, x2)
+#+end_src
+
+The function ~to-pair~ receives various kinds of values at the position of ~x~. It can, however, copy the value ~x~ since the accompanying argument ~A~ necessarily contains the required information to copy the value. The same applies to ~discard~.
+
+
+*** A short break at the end
+
+The above concludes the main part of this article. We see how static memory management is realized by executing types. In a highly sketchy manner, admittedly.
+
+
+I believe that you can now guess why I chose to use dependent type theory in this attempt; The theory just simplifies the implementation since a type in the theory occurs in a program just in the same way as a term.
+
+
+Incidentally, I've seen a lot of introductory articles that support the usefulness of dependent type theory by emphasizing the possibility of length-annotated array types. Such a type can be used to realize array accessing in a safe way. Yes, that's completely true. At the same time, however, I'd like to emphasize another virtue of such a theory here. That is, it makes the language more integrated: Both of the type-level abstraction (i.e. ~forall~) and the term-level abstraction (i.e. function) are represented by the same syntax construct (i.e. ~λ~). We don't need an additional concept to, for example, define a type. This property can be something that appeals to those who seek for a theoretical virtue.
+
+
+
+Also, I'll add a note here. I'm writing this article, thinking that the method that I've shown in this article is new (to some degree). As a general rule, however, there is often a more thoughtful person who has already investigated the very thing that I think is new, and the investigation is often more sophisticated than mine. If it is the case, I hope that this article works as a useful annotation to the preceding research.
+
+
+
+Anyway, the main part ends here. Reading the additional contents below should make the main part more attractive, like a fighting game with a basic understanding of the theory behind it. Let's go ahead.
+
+** Appendix
+*** A highly-accelerated introduction to natural deduction
+
+I tried to omit this section at first, but it turned out to be essential for the explanation. That's why I write a highly-accelerated introduction to the natural deduction. If you want to read a more thorough introductory article, I think you can refer to [[https://www.cs.cmu.edu/~fp/courses/15317-f09/schedule.html][the lecture notes by Pfenning]]. Many thanks to the author and Carnegie Mellon University.
+
+**** Encounter with propositional logic
+
+
+Let's fix a set of distinct symbols. We call an element of this set a propositional variable. We also assume that there are infinitary many propositional variables (the number of them is assumed to be exactly the same as that of the natural numbers). We then define "proposition" as follows:
+1. If \( \alpha \) is a propositional variable, then \( \alpha \) is a proposition.
+2. If \( A, B \) are propositions, then \( A \to B \) is a proposition.
+3. No other syntactic construct is a proposition.
+For example, if \( P \), \( Q \), and \( R \) are propositional variables, then all of \( P \), \( P \to Q \), \( P \to (Q \to R) \) and \( (P \to P) \to R \) are propositions.
+
+
+You may now think that "What are those parentheses in \( P \to (Q \to R) \)?" It's actually not that important, but I'll answer this question here just in case. These parentheses are required because, if we simply write \( P \to Q \to R \), we don't know how to tell if it represents this tree:
+#+begin_src txt
+    →
+   / \
+  →   R
+ / \
+P   Q
+#+end_src
+or this tree:
+#+begin_src txt
+  →
+ / \
+P   →
+   / \
+  Q   R
+#+end_src
+
+The parentheses here are meta-level entities that allow us to represent a tree-structure in a sentence. Indeed, we don't need them if we write a tree structure every time we need it, but it'll be tedious and space-demanding. To summarize:
+1. The "\( A \to B \)" in "\( A \to B \) is a proposition" is not a character sequence but a tree structure
+2. Writing a tree structure every time is troublesome
+3. By the way, we can use parentheses to represent a tree structure in a sentence
+4. Then let's use it as a useful abbreviation
+Using parentheses is a simple trick to represent a tree structure.
+
+
+Also, one might think that the last condition "No other syntactic construct is a proposition" is peculiar. This is, again, not so complex. This is just to say "no" when we're asked like, for example, "Then, is \( \uparrow \uparrow \downarrow \downarrow \leftarrow \to \leftarrow \to  A B\) a proposition?" Without the last condition, we don't know what is not a proposition.
+
+
+Next, we define "quasi-context" as follows.
+1. \( \cdot \) is a quasi-context.
+2. If \( \Gamma \) is a quasi-context and \( A \) is a proposition, then \( \Gamma, A \) is a quasi-context.
+3. No other syntactic construct is a quasi-context.
+In short, a quasi-context is a list of propositions. Something like \( \cdot, A, B, C \). Or, more explicitly, a tree structure like:
+#+begin_src txt
+      ,
+     / \
+    ,   C
+   / \
+  ,   B
+ / \
+.   A
+#+end_src
+We don't need any parentheses this time because we don't have a tree of the following form, for example:
+#+begin_src txt
+      ,
+     / \
+    ,   C
+   / \
+  A   ,
+     / \
+    .   B
+#+end_src
+In other words, that's because it suffices to say that "it is a quasi-context" to specify the tree structure of \( \cdot, A, B, C \).
+
+
+We call \( \cdot \) an empty quasi-context. As you can see from the example above, a non-empty quasi-context is of the form \( \cdot, A_1, \ldots, A_n \). Such a quasi-context is often written as \( A_1, \ldots, A_n \), omitting the \( \cdot \).
+
+
+We define a context to be a quasi-context without order. For example, \( A, B, C, C \) and \( C, B, A, C \) are different when seen as quasi-contexts, but the same when seen as contexts.
+
+
+Let's define a judgment as follows.
+1. If \( \Gamma \) is a context and \( A \) is a proposition, then \( \Gamma \vdash A \) is a judgement.
+2. No other syntactic construct is a judgment.
+For example, all of \( A \vdash A \), \( C \vdash A \to (B \to B) \), and \( \Gamma \vdash A \) are judgement.
+
+
+Our "judgment" is, despite its suggestive name, currently just a syntactic construct with a certain pattern. Just a tree structure with a mysterious name. We'd like to reach the point where we can interpret \( \Gamma \vdash A \) as "Assuming \( \Gamma \), \( A \) is true." We don't, however, have any frameworks that allow us to interpret our judgments.
+
+
+So let's construct such a framework. A framework that allows us to say "This judgment is correct," or "not correct." We're going to, roughly speaking, define a framework to talk about the meaning of a judgment.
+
+
+Generally speaking, there are basically two approaches to define the meaning of a symbol.
+
+
+1. The internal approach. In this approach, we define what a symbol refers to. This approach relates the symbol "that apple" to that red object on that table. This is an approach that focuses on the internals of a symbol, so to speak. If the referred object (= meaning) is defined, we can say that the referred object (= meaning) is not correct when, for example, the symbol "that apple" is used to refer to the Tale of Genji.
+2. The external approach. In this approach, we define how a symbol is used. The approach relates the symbol "that apple" to the use of it like "to turn the attention of the listener to that red object on that table." This is an approach that focuses on the behavior of a symbol, so to speak. If the use (= meaning) is defined, we can say that the use (= meaning) is not correct when, for example, the listener starts headbanging as soon as the person perceived the utterance "that apple."
+
+
+We'll take the latter approach here. Using a few rules, we'll define how a symbol that we named a "judgment" is used. Such a rule is called as an inference rule.
+
+
+An inference rule is represented in the following form:
+
+\[
+\require{bussproofs}
+\begin{prooftree}
+  \AxiomC{\( \mathcal{J}_1 \hspace{1em} \ldots \hspace{1em} \mathcal{J}_n \)}
+  \RightLabel{\( \mathsf{(name)} \)}
+  \UnaryInfC{\( \mathcal{J} \)}
+\end{prooftree}
+\]
+
+
+The \( \mathcal{J}_i \)s above the horizontal line are the judgments. They are the premises of this rule. The inference rule allows us to write the horizontal line and the additional judgment \( \mathcal{J} \) when all the premises are there. The \( \mathsf{(name)} \) is the name of the rule.
+
+
+Let's see actual rules. The first one is the rule of variable:
+
+\[
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( (\mathsf{var}) \)}
+  \UnaryInfC{\( \Gamma, A \vdash A \)}
+\end{prooftree}
+\]
+
+
+This is an inference rule that doesn't need any premises. That's why there is nothing above the horizontal line. Intuitively, this rule can be read like "When \( A \) is assumed, this \( A \) implies \( A \). The same holds when we put additional assumptions \( \Gamma \)." Or, more specifically, by adopting the inference rule above, the "\( \vdash \)" turns into something that can be compared to "implies" in our language.
+
+
+Let's see some examples. All of below are correct applications of the rule \( \mathsf{(var)} \):
+
+\[
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( B, A \vdash A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, B, C, D \vdash A \)}
+\end{prooftree}
+\]
+
+On the other hand, all of below are incorrect applications of the rule \( \mathsf{(var)} \):
+
+\[
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, C \vdash B \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \to A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( \cdot \vdash A \)}
+\end{prooftree}
+\]
+
+
+Let's move on to the next rule. The next rule is something that embeds the meaning of "\( \vdash \)" to the proposion-level construct "\( \to \)":
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma, A \vdash B \)}
+  \RightLabel{\( (\to_{\mathsf{i}}) \)}
+  \UnaryInfC{\( \Gamma \vdash A \to B \)}
+\end{prooftree}
+\]
+
+
+Intuitively, this is something that should be read as: "When '\( \Gamma \) and \( A \) implies \( B \)' is correct, '\( \Gamma \) implies \( A \to B \)' is correct." We've just defined the meaning of "\( \vdash \)" to be implication --- or something that can be compared to it at least --- using the rule \( \mathsf{(var)} \). In turn, this inference rule \( (\to_{\mathsf{i}}) \) is something that sends the judgement-level symbol "\( \vdash \)" into the proposition-level symbol "\( \to \)".
+
+
+
+The rule above is something that generates a new proposition that contains "\( \to \)". In other words, this rule defines when we can say certain proposition. Such an inference rule is said to be an introduction rule. Conversely, a rule that defines what can be said from a proposition is called an elimination rule. The elimination rule of "\( \to \)" is as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_{\mathsf{e}}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]
+
+
+This is something that defines how to use an implication "\( \to \)". This is a rule that allows us to derive "\( B \)" when we know "\( A \) implies \( B \)" and "\( A \)". I believe that there's no surprise here.
+
+
+We take the three rules above, that is,
+1. The rule of variable
+2. The introduction rule of implication
+3. The elimination rule of implication
+as the inference rules of our logical system. We can easily add, for example, AND, OR, or whatever.
+
+
+We can generate, for example, the following pattern by applying the rules above repeatedly:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( B, B, A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( B, B \vdash A \to A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( B \vdash B \to (A \to A) \)}
+  \AxiomC{\( \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( B \vdash B \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( B \vdash A \to A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \cdot \vdash B \to (A \to A) \)}
+\end{prooftree}
+\]
+
+
+Such a generated tree is said to be a proof tree, or simply a proof. A proof of \( \cdot \vdash B \to (A \to A) \), in this case.
+
+**** Detours in a proof tree
+
+We can derive a judgement \( \Gamma \vdash A \) in various ways. For example, consider proving \( \cdot \vdash A \to A \). Of course, we have the following straightforward proof:
+
+\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \cdot \vdash A \to A \)}
+\end{prooftree}
+\]
+
+
+On the other hand, we also have the following redundant proof:
+
+\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( A \vdash A \to A \)}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \cdot \vdash A \to A \)}
+\end{prooftree}
+\]
+
+
+The proof above derives the same \( \cdot \vdash A \to A \). The proof tree is, nevertheless, unnecessarily complex.
+
+
+Where does this complexity come from? Why is the proof tree above unnecessarily big? --- That's because the proof tree contains a "detour." Specifically, the "detour" here is the following part:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( A, A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( A \vdash A \to A \)}
+  \AxiomC{\( A \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( A \vdash A \)}
+\end{prooftree}
+\]
+
+
+This is schematically a proof that introduces the logical connective "\( \to \)," and then immediately eliminates the connective. Introduction followed by immediate elimination. But doesn't it mean that we didn't have to introduce the connective after all? In this sense, the above is a "detour." More generally, such a "detour" is of the following form:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, A \vdash B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]
+
+
+That is, a "detour" is a pattern "introduction followed by immediate elimination." Such a "detour" is often called as a redex (Here, the symbols \( \mathcal{H}_1 \) and \( \mathcal{H}_2 \) represent the upper proof trees).
+
+
+Let's take five minutes or so and gaze at the redex above. Then we'll see that we can construct a proof tree of \( \Gamma \vdash B \) that doesn't contain the redex. The construction can be done as follows. Firstly, focus on the following part:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, A \vdash B \)}
+\end{prooftree}
+\]
+
+
+Now, suppose that the \( A \) in \( \Gamma, A \vdash B \) is used somewhere in \( \mathcal{H}_1 \). In such a situation, we replace this \( A \) by the \( A \) in the following proof tree:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash A \)}
+\end{prooftree}
+\]
+
+
+
+
+By this modification, we now don't have to use the \( A \) of \( \Gamma, A \vdash B \). This means that we can prove \( B \) without using the \( A \) of \( \Gamma, A \vdash B \). That is, if we define \( \mathcal{H'}_1 \) to be the proof tree obtained from \( \mathcal{H}_1 \) by
+
+1. using \( A \) not from the context but from \( \mathcal{H}_2 \), and
+2. removing the \( A \) in the context,
+
+then we can derive the following tree:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H'}_1 \)}
+  \UnaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]
+
+
+This rewriting operation can be summarized as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, A \vdash B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\hspace{3em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( {\mathcal{H'}_1} \)}
+  \UnaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]
+
+
+Such a rewriting operation that resolves a redex is called a reduction. The process of obtaining a proof tree without any redex by reducing the given tree repeatedly is called normalization.
+
+**** Normalizing a proof tree / executing a program
+
+
+In the discussion above, we've denoted a proof tree by a symbol \( \mathcal{H} \). Here, we consider keeping this information in a more local way. We consider keeping the "log" information of a proof every time we apply an inference rule. The log information must be something that can be used when we want to recover the proof of a judgment under consideration. Firstly, let's see the inference rule of a variable:
+
+\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( \Gamma, A \vdash A \)}
+\end{prooftree}
+\]
+
+
+We'd like to add a log information for this inference rule. The log information must be something that be used to tell which \( A \) in the context is actually used in the following application:
+
+\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( A, A \vdash A \)}
+\end{prooftree}
+\]
+
+
+Thus we have to give a name to each proposition in the context. More specifically, we'll do as follows. Firstly, take a set that is exactly as big as the set of natural numbers. Let's call this the variable set. We also call an element of this set a variable. Using this, we extend the definition of a quasi-context as follows:
+
+
+1. \( \cdot \) is a quasi-context.
+2. If \( \Gamma \) is a quasi-context and \( x \) is a varible and \( A \) is a proposition, then \( \Gamma, x : A \) is a quasi-context.
+3. No other syntactic construct is a quasi-context.
+
+
+We also define a "proof term" as follows. We're going to use this to keep track of a proof.
+1. If \( x \) is a variable, then \( x \) is a proof term.
+2. If \( x \) is a variable and \( e \) is a proof term, then \( \lambda x. e \) is a proof term.
+3. If \( e_1 \) and \( e_2 \) are proof terms, then \( e_1 \mathbin{@} e_2 \) is a proof term.
+4. No other syntactic construct is a proof-term.
+
+
+Using this "proof term," we extend the definition of a judgment as follows:
+
+
+1. If \( \Gamma \) is a context and \( e \) is a proof term and \( A \) is a proposition, then \( \Gamma \vdash e : A \) is a judgement.
+2. No other syntactic construct is a judgment.
+
+
+Now we're ready to extend the rule \( \mathsf{(var)} \). It would me more illuminating to show how the example of \( A, A \vdash A \) changes:
+
+\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( x : A, y : A \vdash y : A \)}
+\end{prooftree}
+\]
+
+
+Now that each proposition in the context has a name like \( x \) or \( y \), we can keep the information that shows the "active" proposition in the application of the rule \( \mathsf{(var)} \). As a inference rule, the \( \mathsf{(var)} \) is extended as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\(  \)}
+  \RightLabel{\( \mathsf{(var)} \)}
+  \UnaryInfC{\( \Gamma, x : A \vdash x : A \)}
+\end{prooftree}
+\]
+
+
+The log information of the derivation of a judgment is saved in \( e \) of \( \Gamma \vdash e : A \).
+
+
+Let's move on to the introduction rule of "\( \to \)". This is extended as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma, x : A \vdash e : B \)}
+  \RightLabel{\( (\to_{\mathsf{i}}) \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x. e : A \to B \)}
+\end{prooftree}
+\]
+
+
+The premise of the introduction rule of "\( \to \)" is now turned into \( \Gamma, x : A \vdash e : B \). This is just because the definition of a judgment is extended. No surprises. Also, we now have a really connotative proof term \( \lambda x. e \) in the conclusion. This is, however, just a term that keeps track of a fact that we applied the extended introduction rule of "\( \to \)," focusing on the variable \( x \). This is just a log of a proof. Such an extension is an automatic process; we don't need any creativity here.
+
+
+Finally, let's move on to the elimination rule of "\( \to \)". This is extended as follows:
+
+\[
+\newcommand{\app}[2]{#1 \mathbin{@} #2}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e_1 : A \to B \)}
+  \AxiomC{\( \Gamma \vdash e_2 : A \)}
+  \RightLabel{\( (\to_{\mathsf{e}}) \)}
+  \BinaryInfC{\( \Gamma \vdash \app{e_1}{e_2} : B \)}
+\end{prooftree}
+\]
+
+
+Again, we simply added the required proof terms to the rule. No surprises.
+
+
+Now, let's add proof terms to our detours that we saw above. It generates the following proof tree:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, x : A \vdash e_1 : B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x. e_1 :  A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash \app{(\lambda x. e_1)}{e_2} : B \)}
+\end{prooftree}
+\]
+
+
+It looks like, well, something. Let's continue this line pretending ignorance. Remember the operation of resolving a redex. It is, after all, the operation of replacing the use of \( x : A \) by \( e_2 : A \). This means that the resulting proof term is the term that can be obtained by replacing all the \( x \) in \( e_1 \) by \( e_2 \). That is to say, the rewriting operation is summarized as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \mathcal{H}_1 \)}
+  \UnaryInfC{\( \Gamma, x : A \vdash e_1 : B \)}
+  \RightLabel{\( (\to_\mathsf{i}) \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x. e_1 :  A \to B \)}
+  \AxiomC{\( \mathcal{H}_2 \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : A \)}
+  \RightLabel{\( (\to_\mathsf{e}) \)}
+  \BinaryInfC{\( \Gamma \vdash \app{(\lambda x. e_1)}{e_2} : B \)}
+\end{prooftree}
+\hspace{3em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( {\mathcal{H'}_1} \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 \{x := e_2\} : B \)}
+\end{prooftree}
+\]
+
+
+Here, the \( \{x := e_2\} \) is the operation of substitution that replaces all the occurences of the variable \( x \) by the term \( e_2 \). We won't go into its rigorous definition here; It's something that translates \( x + y + x \) into \( e_2 + y + e_2 \). I believe that your wisdom can imagine its basic behavior.
+
+
+Anyway, finally, by focusing on the behavior of the proof terms in the reduction above, we obtain the following (hopefully familiar) reduction rule:
+
+\[
+  \app{(\lambda x. e_1)}{e_2} \leadsto e_1 \{x := e_2\}
+\]
+
+
+Starting from investigating natural deduction, we've reached to the viewpoint of lambda calculus (or programming). From this viewpoint, a judgement \( x_1 : A_1, \ldots, x_n : A_n \vdash e : A \) is now read as: "with free variables \( x_1 : A_1, \ldots, x_n : A_n \), the program \( e \) is of type \( A \)." Especially, a proposition is now interpreted as a type. This story continues like, for example, "resolving a detour in a proof tree is executing a program," or "how we resolve detours in a proof tree corresponds to how we execute a program (like call-by-value, call-by-name)," etc.
+
+
+This relation between a proof and a program is often referred to as the Curry-Howard correspondence. Our talk on a proof is always-already reinterpretable as a talk on a program, and vice versa.
+
+
+This correspondence is enlightening and exciting. By extending the proof-side discussion to be able to, for example, represent something like "\( P \) is necessarily true," we can obtain [[https://www.cs.cmu.edu/~fp/papers/popl96.pdf][the concept of staged computation (something like the quasiquote in lisp)]] by reinterpreting necessity in the program-side.
+
+
+*** Motivation from proof theory, or the ice-cold correspondence
+**** The ice-cold correspondence
+
+Well, this is the end of an ordinary introduction of the Curry-Howard correspondence. In this article, however, the story doesn't end here. Hey, I was fairly impressed when I first know the correspondence. That's why I tried to create a programming language that utilizes the correspondence to the maximum degree possible. A programming language in which any computational concepts in the language are supported by some proof-theoretic concepts.
+
+
+A variable can be reinterpreted easily. The introduction rule of implication is easy. The elimination rule is also easy. This and that logical connectives can be added in a straightforward manner. A fixed point operator can be easily added, which makes the language Turing complete. Polymorphism can be realized by extending the logical system to a weak variant of predicate logic. Type inference can be implemented using the well-known method. "Okay, everything seems to be all right," and this is how I reached to the question: "---But how can I manage memory in this language?"
+
+
+Then I investigated existing languages that have proof-like / lambda-like flavor. They seem to use GC (OCaml, Haskel, F#, Idris, Coq, Agda, Lean). Fair enough. All of them are great in their own way, of course. At the same time, however, it is also a fact that they didn't satisfy my current curiosity; I failed to find one that manages memory in a proof-theoretic way.
+
+
+
+All in all, yes, the Curry-Howard correspondence is something that allows us to compare a logical system with an idealized programming language. What I found at the time was that, when considering a real programming language, the aspect of memory management was dealt with as something that should be resolved at the implementation level. It seemed to be recognized as an irregular part of a real programming language, a part that strays from the pure, ice-cold correspondence.
+
+
+**** What about the region-based approach?
+
+What we'll find when we continue surveying existing works on memory management is the region-based approach. The approach is something that computes the information that is required to realize static memory management by adding annotations to the type system. A great approach. It indeed realizes static memory management. It can, for example, statically detect a wrong use of memory like free-after-free.
+
+
+However, I was too greedy to accept the approach as an answer to the question. I didn't want to add annotations that don't live in the intuitionistic logic. I didn't want to add non-proof-theoretic, implementation-oriented constructs. I wanted to find the vocabulary for memory management *in* the usual, our familiar natural deduction. I wanted to retain the scheme of "thinking about proofs is always-already thinking about programs" when we thought about memory. That's why I couldn't simply accept the region-based approach, even if the approach is indisputably brilliant under other situations.
+
+
+I think we should visit the method called "region-inference" here. This is an extension of the ordinary type inference that infers not only type information but also region information --- information that can be used to realize static memory management. Using this method, for example, a compiler for Standard ML (A language specification that is similar to OCaml) with static memory management is [[https://sourceforge.net/projects/mlkit/][developed]][fn:reginf].
+
+
+What this implies is that we can realize static memory management for a program that is written in the range of the intuitionistic logic. So isn't this an answer? A language with region-based memory management and region inference. Isn't this the answer that I've been looking for?
+
+
+The response to this starts by considering the following program in which the type annotation of the lambda abstraction is omitted:
+
+#+begin_src txt
+λx. (not x, 10)
+#+end_src
+
+
+When inferring the type of the code above, the compiler would generate a metavariable ~?M~ that stands for the type of ~x~. That is, the compiler would generate a term like this:
+
+#+begin_src txt
+λ(x : ?M). (not x, 10)
+#+end_src
+
+
+Then the compiler generates constraints like ~bool = ?M~, using the known type information like ~not : bool -> bool~. The generated constraints are in turn resolved, resulting in a substitution like ~?M := bool~. This substitution is applied to the term above, resulting in the following term:
+
+#+begin_src txt
+λ(x : bool). (not x, 10)
+#+end_src
+
+
+Thus we now know that the original program is actually an abbreviation of this fully-elaborated program. The point here is that the metavariable ~?M~ is inserted in the way above just because the type inference algorithm is defined to do things in that way. If we, for example, want to obtain the number of times that a variable used, the compiler would generate a term like this:
+
+#+begin_src txt
+λ(x : <?M, ?n>). (not x, 10)
+#+end_src
+
+And this term is elaborated into:
+
+#+begin_src txt
+λ(x : <bool, 1>). (not x, 10)
+#+end_src
+
+
+This means that the original program is actually an abbreviation of this term, in this case. In short, the fully-elaborated form of a program is relative to the type inference algorithm.
+
+
+Now, region inference is a variant of type inference. This means that a program written in a language with region inference is elaborated in the context of region inference. A program in such a language will be something that can contain abbreviations of not only types but also regions, just like the metavariable ~?n~ in the example above. The situation is something like: "We can technically write information on region explicitly, but all of them are accidentally abbreviated this time."
+
+
+This sums up to the following conclusion: in a language with region inference, even if we might be able to write a program that seems to be closed in the intuitionistic logic, it is actually a program with implicit region information --- and the information is actually there as a result of elaboration. Changing the behavior of its type inference algorithm means changing how a program is interpreted as an abbreviation. The approach with region inference is, therefore, reduced to the approach with the ordinary region-based memory management. That's why the approach isn't satisfying for the current curiosity.
+
+**** Motivation
+
+This is where we come to reach our motivation; We want to realize memory management in a natural-deduction based programming language, without adding annotations to its type system. We want to find the vocabulary for memory management *in* our language (= the intuitionistic logic). We want to realize memory management in a Curry-Howard-y way.
+
+
+From this viewpoint, this article is something that answers to the requirement above in a positive way. This article is something that shows how to realize such a resource management system, with an accompanying proof-of-concept implementation. A real programming language can still live in the ice-cold correspondence, after all.
+
+
+This finally gives the background motivation to this article. It was a long run.
+
+
+--- But why after all do we use η-expansion rather than anything else? As we've already seen in the main part, we can leverage η-expansion to use the resource information of a type. Why thinking about η-expansion is related to thinking about resource management? We'll focus on this point in the next section.
+
+*** Computational significance of local completeness
+**** Local soundness
+
+Let's go back to the proof-theoretic talk[fn:judgmental]. We've already seen the concept of reduction. An operation that resolves a detour in a proof tree. Let's focus on this. Now, for example, suppose that we want to add the logical connective "AND" to our logical system. We'll write the "AND" of \( A \) and \( B \) as \( A \land B \). How the introduction rule and the elimination rule of "\( \land \)" should be?
+
+
+Well, defining the introduction rule and the elimination rule itself is not that difficult. The introduction rule should be something like this:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+\end{prooftree}
+\]
+
+
+That is, we need to know \( A \) and \( B \) to derive \( A \land B \). The elimination rules can also be easily added as follows, for example:
+
+\[
+\newcommand{\andlet}[3]{\mathsf{let}\, #1 := #2\, \mathsf{in}\, #3}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}\, e : A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}\, e : B \)}
+\end{prooftree}
+\]
+
+
+The reduction rules for this logical connective will be something like this:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(e_1, e_2) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+\end{prooftree}
+\]
+
+
+and this:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(e_1, e_2) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+\end{prooftree}
+\]
+
+No surprises until here.
+
+
+Now, let's sell our souls to the devil and consider replacing the introduction rule of "\( \land \)" by the following two rules:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+\end{prooftree}
+\]
+
+
+Yes, broken, obviously. We don't even know how to interpret them. These magics are so broken that we can derive any proposition \( B \) from any proposition \( A \):
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\]
+
+
+They can break the logical system behind them. We shouldn't accept such a pair of the introduction rules and the elimination rules.
+
+
+The experiment above tells us that there must be certain relations between the introduction rules and the elimination rules of a logical connective, and that without it we would have a broken, insane, unsound logical connective. Then, in turn, what sort of relations does a logical connective need for it to be sane?
+
+
+
+What if we just say "It'll break the system. I know. So what?" here? Let's try continuing the talk on our broken "\( \land \)". As in the case of ordinary "\( \land \)", we'll have to define its reduction rules for this insane logical connective. The detours for this connective are the following four, resulting from the two introduction rules and the two elimination rules:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(\mathsf{magic}_\mathsf{L}\, e) : A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(\mathsf{magic}_\mathsf{R}\, e) : A \)}
+\end{prooftree}
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{R}\, e) : B \)}
+\end{prooftree}
+\]
+
+
+The reduction rule for the first one should be easily defined as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(\mathsf{magic}_\mathsf{L}\, e) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+\end{prooftree}
+\]
+
+
+Similarly for the fourth rule:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{R}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{R}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : B \)}
+\end{prooftree}
+\]
+
+
+The second and the third one are, however, problematic. Let's take the second one for example:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{?} : B \)}
+\end{prooftree}
+\]
+
+
+We can't resolve the detour above. That's because, to resolve the detour, we need to prove the conclusion of the elimination rule (here it's \( B \)) from the premise of the introduction rule (here it's \( A \)), which is impossible. As a comparison, let's review the reduction of the ordinary "\( \land \)":
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_2 : B \)}
+  \BinaryInfC{\( \Gamma \vdash (e_1, e_2) : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{L}(e_1, e_2) : A \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e_1 : A \)}
+\end{prooftree}
+\]
+
+
+We can see that the conclusion of the elimination rule (here it's \( A \)) is shown using the premises of the introduction rules (here they're \( A \) and \( B \), though only \( A \) is used this time).
+
+
+After all, the operation of resolving a detour is the operation of proving the conclusion of an elimination rule from the premises of the introduction rules[fn:asm]. That is to say, we can define the reduction rules only when we can prove all the possible results of elimination from the premises of the introduction rule. That is to say, the elimination rules shouldn't be too strong with respect to the introduction rules --- if an elimination rule is too strong, it can derive a proposition that strays from the range that is covered by the premises of an introduction rule.
+
+
+As for the ordinary "\( \land \)", all the possible propositions obtained by eliminating \( A \land B \) --- which is \( A \) and \( B \) --- must be shown from the premises of the introduction rule --- which is \( A \) and \( B \). This property is indeed satisfied, and that's why we can define the reduction rule of "\( \land \)".
+
+
+On the other hand, as for the crazy "\( \land \)", the proposition \( B \) obtained by eliminating \( A \land B \) can't be show from the premise of its introduction rule when the premise of the introduction rule is \( A \):
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{magic}_\mathsf{L}\, e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \pi_\mathsf{R}(\mathsf{magic}_\mathsf{L}\, e) : B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{?} : B \)}
+\end{prooftree}
+\]
+
+
+That's why we can't define the reduction rule for this connective.
+
+
+
+A logical connective for which we can define the reduction rules is said to have local soundness. The lack of local soundness means the possibility of deriving propositions that shouldn't be derived. We can summarize here that our broken logical connective is broken in that it doesn't have local soundness.
+
+**** Local completeness
+
+By summarizing things in the way above, now we can consider a property that can be obtained by reversing local soundness. Or equivalently, a property that ensures that the elimination rule is not too weak. This property is called as local soundness.
+
+
+Remember that we can characterize the property of local soundness as a possibility of rewriting proof trees --- the possibility of reduction. Similarly, we can characterize the property of local completeness as a possibility of rewriting proof trees. We'll explain the characterization taking \( A \land B \) as an example. Assume that we have a proof tree of \( e : A \land B \). In this situation, suppose that we can construct a proof tree of \( A \land B \) that satisfies both of the followings:
+
+1. Every occurrence of a premise in the proof tree is of the form \( e : A \land B \)
+2. Every occurrence of a premise \( e : A \land B \) is immediately eliminated
+
+In this situation, we say that the "\( \land \)" has local soundness. This mysterious definition needs an explanation, of course. Let's start from performing such a rewriting operation (expansion) to \( A \land B \):
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \land B \)}
+\end{prooftree}
+\hspace{1em}
+\leadsto
+\hspace{1em}
+\begin{prooftree}
+  \AxiomC{\( \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{left}\, e : A \)}
+  \AxiomC{\(  \vdots \)}
+  \UnaryInfC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{right}\, e : B \)}
+  \BinaryInfC{\( \Gamma \vdash (\mathsf{left}\, e, \mathsf{right}\, e) : A \land B \)}
+\end{prooftree}
+\]
+
+
+
+
+We can easily check that the expanded proof tree of \( A \land B\) satisfies the properties above.
+
+
+Now, suppose that the elimination rule is too weak. In this case, by the condition "every \( A \land B \) is immediately eliminated", the information of \( A \land B \) can only be used in some incomplete way. That is to say, we shouldn't be able to recover a proof of \( A \land B \) in this case. For example, consider removing the following rule from the elimination rule of \( A \land B \):
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash e : A \land B \)}
+  \UnaryInfC{\( \Gamma \vdash \mathsf{right}\, e : B \)}
+\end{prooftree}
+\]
+
+
+In this case, we can't construct the branch of \( \mathsf{right}\, e : B \), and we can't recover "\( A \land B \)". Thus the "\( \land \)" in this case doesn't have local completeness --- its elimination rule is too weak.
+
+
+Conversely, by the fact that we can recover \( A \land B \), we can see that the elimination rules of \( A \land B \) is not too weak. That's why the possibility of such an expansion supports the local soundness of "\( \land \)".
+
+**** Local soundness and time / local completeness and space
+
+Generally speaking, we don't much care about local completeness (and its corresponding expansion) when we think about the operational behavior of a program. It's almost ignored, and we often focus only on reduction. Well, that can be an overstatement, but there's that sort of vibe, I believe. Indeed, for example, when we want to think about the operational behavior of a programming language which is based on a certain form of lambda calculus, we only have to focus on its reduction, and we can simply ignore its local completeness.
+
+
+At the same time, however, I find it a little mysterious. It's ultimately just our convenience that we exclusively utilize the reductional aspect of a logical system. The logical system won't give a damn to our these busy activities, so to speak. It might be, then, reasonable to some degree to think that the expanding operation can have as much significance as the reducing operation. They're the two sides of the same coin, after all[fn:adj]. That's how I've come to think that local expansion could be utilized to realize some important aspect of computation, and that the aspect should be something that complements the reductional aspect.
+
+
+Now, by the way, it won't be a sin to say that reduction is something that rules over the behavior of a program with respect to time. What can be, then, obtained by taking the other side of time? If we bring a computer scientist here and ask them about it, we'll see them saying that it's space. This pushes us even further: We might be able to utilize local completeness to realize memory management.
+
+
+From this viewpoint, this article is something that does realize static memory management -- control the behavior of a program with respect to space --- via local completeness. In other words, this article gives support to the following (dubious) contrast:
+
+
+- Local soundness gives a foundation of a program with respect to time
+- Local completeness gives a foundation of a program with respect to space
+
+
+Well, I know that this part is too rough and unsupported. It's unsupported enough to make me think that I should insert some self-ironical meme here, but unfortunately I can't since I'm not familiar with English memes. Anyway, having said that though, it's also a fact that the starting point of this article is around here, and that's why I chose to write down these thoughts, despite its sketchiness.
+
+*** A foundation for the resource management via copy/discard
+
+Let's move on to the next topic. Here we'll see an additional explanation of an aspect of the method in this article. That is, we'll see what kind of foundation can be found for the copy/discard approach.
+
+Let's take the following ordinary reduction in lambda calculus as an example:
+#+begin_src txt
+   (λ x. (x, x)) @ "hello"
+~> ("hello", "hello")
+#+end_src
+We name both of the terms in the reduction above as follows, just for explanation purpose:
+#+begin_src txt
+e1 := (λ x. (x, x)) @ "hello"
+e2 := ("hello", "hello")
+#+end_src
+The reduction above can be written as ~e1 ~> e2~, of course.
+
+
+Now, consider comparing the behavior of the code ~e1~ and the code ~e2~ in a pure language with garbage collection. In this case, obviously, the behaviors of them are different in whether the computation that corresponds to the reduction above will occur or not. True, but that isn't the end of the story; We still have the following difference in space:
+
+
+- When we write ~e1~ in our code, the string ~"hello"~ is, once created, shared in ~(x, x)~. That is, when the program is in the state that corresponds to ~("hello", "hello")~, the first and the second element of the tuple refer to the same memory region (the address of the string ~"hello"~).
+- When we write ~e2~ in our code, the string ~"hello"~ is simply created twice.
+
+
+The string ~"hello"~ is created only once in the code ~e1~, but twice in the code ~e2~. That is to say, the behavior of a program with respect to space varies, depending on whether we write the former term or the latter term of the reduction ~e1 ~> e2~. That is to say again, the reduction doesn't preserve the result of computation with respect to space.
+
+
+Then what will happen when we require the reduction rule to preserve the result of a program with respect to not only time but also space? In this case, the code ~e1~ must create the same number of copies of the string ~"hello"~ as that of ~e2~. That is, 2 copies, and this "2" comes from, of course, the number of the ~x~ in the following code:
+#+begin_src txt
+λ x. (x, x)
+#+end_src
+
+
+
+Thus the behavior of ~e1~ must be something as follows (adopting call-by-value):
+
+1. A piece of memory region for the string ~"hello"~ is allocated and initialized
+2. The string is passed to the lambda abstraction
+3. (Let n be the number of the times that the variable ~x~ is used in the lambda abstraction)
+4. The lambda abstraction copies / discards the argument (= the string) to create n copies of it
+5. Execute the remaining computation
+
+In this interpretation, the ~e1~ indeed creates two copies of ~"hello"~. This gives a foundation for the copy/discard approach. That is, the approach is something that is automatically required when we request the reduction rule to preserve the result of computation with respect to not only time but also space.
+
+*** Can we expect acceptable performance from this approach?
+
+By the way, thinking things soberly, it is nothing but a crazy deed to copy the value of a variable every time when we use it. The word "wasteful" can't be enough for this. It's a violation of CPU rights. One might be lead to say that the approach presented in this article is something that can be meaningful only in the ivory tower, and that it is infeasible in our rough real world. The actual situation is, however, not that tragic. As is often the case, the ivory tower has a secret passage; Optimization.
+
+
+We'll see three possible optimizations below. The most interesting aspect of this section would be, rather than the detail of each optimization, the fact that all of those optimizations are formulated by the words that specify how we should write a term in our language. The fact that we recognize vocabulary for resource management *in* the existing lambda calculus.
+
+
+As expected, we won't see any benchmarks or that sort of thing here. Again, please take the content below with a grain of salt, and a bag of popcorn if you like.
+
+
+**** Borrowing-like operation
+
+The first one. Consider the following code:
+#+begin_src txt
+let str := "hello" in
+let _ := print str in
+let _ := print str in
+print str
+#+end_src
+
+The code above prints ~"hello"~ for the three times. We can see that the variable ~str~ is used for the three times. Thus the code above creates three copies of ~"hello"~. That just sounds terrible.
+
+
+We can, however, avoid this situation with a little thought. The point here is the type of ~print~. We can set the type of ~print~ not ~string -> top~, but ~string -> string * top~. That is, we set ~print~ as a primitive function with the following behavior:
+1. Receives a string ~s~ as the argument of it
+2. Prints ~s~
+3. Returns the pair of ~s~ and ~unit~
+With this ~print~, the code above can be rewritten as follows:
+#+begin_src txt
+let str := "hello" in
+let (str1, _) := print str in
+let (str2, _) := print str1 in
+print str2
+#+end_src
+Or, renaming the variables,
+#+begin_src txt
+let str := "hello" in
+let (str, _) := print str in
+let (str, _) := print str in
+print str
+#+end_src
+With this rewriting, we can avoid the copying operations for ~"hello"~ in the original code.
+
+
+By the way, I noticed that the above pattern of "attaching an argument to its result as it is" occurs frequently. That's why I added a dedicated syntax for it in the language that I implemented this time. That is, if we write a term something like below:
+#+begin_src txt
+let _ := print &str in (...)
+#+end_src
+This term is, then, translated into the term:
+#+begin_src txt
+let (str, _) := print str in (...)
+#+end_src
+in the parsing stage (Although the actual looking is a little different since the actual syntax is S-expression based, what happens is essentially as above). It looks like borrowing, though I think I should refrain from using this word here so as not to cause the name collision to the proper ones in C++ or Rust.
+
+
+Anyway, using this syntax, we can write, for example, a function that prints the received string twice as follows:
+#+begin_src txt
+let print_twice :=
+  λ str.
+    let _ := print &str in
+    let _ := print &str in
+    (str, top.unit)
+#+end_src
+
+**** State and shadowing
+
+The second one. Suppose that we want to realize a computation with states. In what way should we implement it? Of course, we can use the state monad, leveraging the power of the lambda calculus. This approach has, however, a problem. Let's see how the ~get~ of the state monad is implemented:
+#+begin_src txt
+let get :=
+  λ s. (s, s)
+#+end_src
+
+Here the ~s~ is a variable that receives the state. If the state monad has, for example, ~string~ as its state, then the ~s~ receives a string. Now the problem should be clear: Since the variable ~s~ is used in a non-linear way (twice), the string is copied every time when we call the function ~get~. The state is copied as a whole every time when we use the state. A tragedy. That makes us seek an alternative approach.
+
+
+And luckily there indeed is such an alternative approach: We just have to apply the shadowing-based optimization that we've seen above to a top-level variable. I think this can be best explained by an example:
+
+#+begin_src txt
+-- define a variable to keep state information
+let str-state :=
+  "hello" in
+
+-- define a function that receives the state `s`, compute using that state, and returns the pair `({updated state}, unit)`
+let proc :=
+  λ s.
+    let _ := print &s in
+    let s := concat s "!" -- append "!" to the current state (string)
+    let _ := print &s in
+    (s, top.unit) in
+
+-- use the borrowing-like operation at top level
+let _ := proc &str-state in
+-- the above is equivalent to `let (str-state, _) := proc str-state`, and thus str-state is "hello!" here
+
+-- do the same thing again
+let _ := proc &str-state in
+-- str-state is "hello!!" here
+
+(...)
+#+end_src
+
+
+Note that the variable for a state (~str-state~ in this case) is used linearly, that we can read the value of the state, and that we can "write" a new value to the state. This allows us to realize a state-related computation without causing wasteful copy operations of the state. We can easily add a syntax sugar for this kind of operation, of course. This resolves the problem of computation with states.
+
+
+
+**** Cancelling malloc/free
+
+The third one. Remember that our language determines memory allocation/deallocation in a static way. This means, as a matter of course, that we should know, at the time when the compilation is finished, where to insert ~mallloc~ s and ~free~ s, and the size of the memory region that a malloc/free should handle. Thus the resulting code will be conceptually something like this:
+#+begin_src txt
+a := malloc(SIZE);
+(...)
+free(a);
+b := malloc(SIZE);
+(...)
+free(b);
+#+end_src
+Here, since the ~a~ and ~b~ are of the same size, we can reuse the region of ~a~ for ~b~. Thus, the code above should be able to be rewritten as follows:
+#+begin_src txt
+a := malloc(SIZE);
+(...)
+b := a;
+(...)
+free(b);
+#+end_src
+And this is indeed possible. This optimization is implemented in the actual language.
+
+
+**** Summary of performance
+
+So, to what extent these optimizations work well in real life? Can we expect acceptable performance from this approach? The most honest answer from me is, as expected, the "I don't know." Personally, I'm thinking that the range that can be covered by the linear lambda calculus is, thanks to the method that we've seen above, actually larger than we would expect at first, but this is nothing but a sheer imagination that isn't supported by anything. I, of course, want to develop the current implementation into a more full-fledged one so that I can test its performance using some profiling tools, but my lack of this and that resources don't allow me to do that.
+
+
+Incidentally, it might also be of interest to investigate what will happen when we take multi-threaded behavior into account. I reckon that we can't send/receive states between threads as long as we realize the "write" operation on states by means of shadowing (since the result of the "write" operation in a thread can't be reflected in the other threads), but I don't know to what extent this difference is significant.
+
+
+I also ran into [[https://arxiv.org/abs/1802.00961][a work that investigates multi-threaded behavior via the Curry-Howard correspondence]]. The research utilizes a generalization of the Gödel's axiom (Here, the axiom is like \( (A \to B) \lor (B \to A) \)). I find it intriguing. At the same time, however, I find the reduction rule in the research rather complex --- at least for me. Although it might be possible that if I fully understand the work then the reduction rules can be derived immediately in some simple, principled way, currently I don't think that I can incorporate it into the language as it is. Or should I add mysterious constants and use them as black-boxes that realize multi-threaded behavior? I'm not sure.
+
+*** Miscellaneous
+
+Some additional notes, basically on things that I left undone.
+
+**** On safety
+
+As I wrote at the beginning of this article, I don't have any proof that guarantees the safety or the correctness of the approach in this article. This is simply a result of my limited resource.
+
+
+Regarding safety, I think I should mention the inconsistency of the logic here. Since the logical system of the language admits ~Type : Type~ (Or, since it has a fixed point operator), the logical system is obviously inconsistent. That is, for any type ~A~, we can construct a proof term ~e~ such that ~e : A~. Also, remember that the resource management system in this article is based on type. This might pose a question: Can't we destroy the proof-theoretic resource management system by exploiting the inconsistency of the logic?
+
+
+Trying it out in actual code, however, we can see that the execution of such ~e~ just results in an infinite loop. Admitting ~Type : Type~ doesn't mean admitting, for example, ~"hello" : int~. The ~e~ in a proof ~e : A~ follows a certain pattern even when we construct the ~e~ using ~Type : Type~ or ~fix~. Such a logic is consistently inconsistent, so to speak, though I don't have any proof for this, as usual.
+
+
+
+**** Where's a denotational semantics?
+
+As anyone with certain knowledge can see within 0.2 seconds, this article is heavily biased towards the syntax side, or the proof-theoretic side. Equivalently, this article doesn't contain any information on a denotational semantics of the system. I personally think that translating a type into a term is interesting in its own way, and am interested in its behavior from the viewpoint of categorical semantics. I'm, however, currently not very good at categorical semantics of dependent type theory.
+
+**** On the lack of theoretical backgrounds
+
+
+Related to the above-mentioned point, as you may have already noticed, the theoretical backgrounds of this article is far from complete. Being a little technical, the actual compiler behaves basically as follows:
+
+
+1. begins from receiving a program written in the Calculus of Constructions (an intuitionistic logic on steroids)
+2. translates the program into the one in a dependent variant of the Call-By-Push-Value
+3. applies closure conversion so that all the lambda abstractions in the program are closed
+4. linearizes all the resources via our computational interpretation of type
+5. generates virtual machine code as usual
+
+
+Frighteningly enough, I didn't give any proofs that guarantee the correctness of the translations included in the above. I didn't even check that the dependent variant of CBPV isn't broken. Generally speaking, as we all know, a seemingly well-designed idea in our mind is doomed to be found broken when we try to re-articulate it on a piece of paper; Even though we do have a working implementation, it is still possible that we find an inherent vice in the approach[fn:eff-in-type].
+
+
+
+
+**** On the name
+
+Let me digress a little before concluding the article. I went with naming the language "Neut" this time. Here, I'd like to emphasize that I don't have any thought of, like, "This language is neutral in an important aspect!" or whatever. Indeed, the language is obviously opinionated in that, for example, it adopts the viewpoint of "I ♡ natural deduction". Rather, the name came from its implementation.
+
+
+As mentioned above, the compiler translates an intuitionistic lambda calculus (the Calculus of Constructions) into a dependent variant of a calculus called Call-By-Push-Value (CBPV). The main difference between CBPV and an ordinary calculus would be the point that CBPV has two kinds of type. More specifically, CBPV has "type for value" and "type for computation"; The former are normally said to be positive, and the latter to be negative. That is, the language has polarity. The introduction rule of, for example, "\( \to \)" in CBPV is as follows:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma, x : P \vdash e : N \)}
+  \UnaryInfC{\( \Gamma \vdash \lambda x.e : P \to N \)}
+\end{prooftree}
+\]
+
+
+Here, the \( P \) stands for a positive type, and the \( N \) for a negative type. We can easily see that the argument of a lambda abstraction must be positive (\( x : P \)), and that the body of the abstraction must be negative (\( e : N \)). Also, the \( P \to N \) itself is set to be a negative type, and thus it can't be, for example, passed to another lambda abstraction as an argument without some modification.
+
+
+If it's allowed to say that linear logic is something that enables us to investigate logic further with respect to resources, it might also be allowed to say that CBPV is something that enables us to investigate logic further with respect to reduction (too rough?). More information on CBPV can be found [[https://www.cs.cmu.edu/~fp/courses/15816-f16/lectures/21-cbpv.pdf][here]]; The lecture note should be readable with basic knowledge of natural deduction. [[https://www.cs.bham.ac.uk/~pbl/papers/thesisqmwphd.pdf][The dissertation by Levy]], who created/discovered the CBPV, is even more detailed, though it can be overwhelming.
+
+
+Anyway, the point here is that the compiler polarizes an input by a user. From this perspective, a program doesn't have polarity at first, and it is neutral in that sense. What a user writes is a neutral proof term. So, just like we write text in a text file and set its extension to be ".txt", I chose to set the extension of a file that write a neutral term ".neut", and also went with using it as the name of the language. That's the whole story.
+
+** Afterword
+GG.
+
+[fn:depcls] This extension of closure conversion is essentially just an existential quantification. Our familiar existential quantification starts from a statement with free variable(s) like ~x + 1 = 0~, and then create a proposition like ~exists (x : int). x + 1 = 0~, anonymizing the variable ~x~. What the generalized closure conversion does is essentially the same; The type of the closure
+#+begin_src txt
+({the set of free variables},
+ λ (the original arguments, env).
+   let (the free variables) := env in
+   {the original code})
+#+end_src
+is like:
+#+begin_src txt
+(A1 * ... * An) * {the type of the closed function}
+#+end_src
+The conversion here is something that anonymizes the first element with the existential quantification, creating a term of the following type:
+#+begin_src txt
+Sigma (A : Type). A * {the type of the closed function}
+#+end_src
+The point here is that the ~A1 * ... * An~ is lowered to the term from the type.
+
+# By the way, I was told that this method isn't especially new. Indeed, I was told that [[https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf][the paper that I was introduced]] in [[https://github.com/u2zv1wx/neut/issues/1][a GitHub issue]] does a similar (the same?) thing, though I haven't been able to read it yet due to my limited resource of time. Also, with a quick search, I found [[https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf][a work in 1996 that does a similar thing]]. Thus I emphasize here that I don't claim any originality on this generalization of closure conversion so as not to cause troubles; I just hope that this works as a useful annotation, or at least a helpful pointer, for these preceding works.
+Incidentally, this 3-element representation of a closure is not new. Indeed, I was told in [[https://github.com/u2zv1wx/neut/issues/1][a GitHub issue]] that there exists [[https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf][a work]] that does a similar (the same?) thing. Also, with a quick search, I found [[https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf][a work in 1996 that does a similar thing]]. Thus I emphasize here that I don't claim any originality on this generalization of closure conversion.
+
+[fn:closedchain] A question can be posed here: What will happen when a type contains free variables? The short answer is that this sort of situation is handled by the generalized concept of a free variable. That is, the concept is generalized so that free variables in a type of a term are also regarded as free variables of the term. For example, consider the following term:
+
+#+begin_src txt
+λ (A : Type). λ (x : A -> int). (x, 100)
+#+end_src
+Normally, the free variable of ~(x, 100)~ is considered to be simply ~x~. With our generalization, however, since the type of ~x~ (i.e. ~A -> int~) contains ~A~ as its free variable, this ~A~ is also counted as a free variable. Also, since the type of ~A~ (i.e. ~Type~) doesn't contain any free variables, this "tracing" operation ends here, with the result that the free variables of ~(x, 100)~ is ~A, x~. In this way, we construct a "closed chain" of all the free variables of a term. We then put it at the first element of a generalized closure so that we can copy the closure later.
+
+[fn:eff-in-type] What will happen when a type contains side effects? There can be at least two responses to this situation:
+
+1. To reject such a term at the type checking stage by making the language pure
+2. To set its behavior undefined, allowing such a term to pass the type checking stage
+
+The former approach would set, for example, the type of ~print~ to be ~string -> io (string * top)~ (the ~io~ is our beloved IO monad). By this modification, the type of a "type" that uses ~print~ in its definition changes from ~Type~ to ~IO Type~. Since the ~A~ in ~A : IO Type~ can't be used as a type, we can't write, for example, ~A -> int~. We're safe now.
+
+Conversely, the latter approach just says: "It's your fault. Don't write crazy stuff in a type." The actual implementation adopts this approach, by the way.
+
+[fn:modal] When trying to recover the expressivity of intuitionistic logic starting from linear logic, the first approach that one comes up with would be to use the famous exponential modality ~!~. This approach, however, doesn't seem to work well. Consider adding the modality to the system, and admitting the weakening/contraction operation for the propositions with the modality (that is, the propositions of the form ~!A~). In this situation, the modified system essentially contains the intuitionistic logic as a fragment --- a fragment in which all the propositions are of the form ~!A~. This makes us go back to the starting point: "How can we manage memory in a system based on the intuitionistic logic?"
+
+[fn:judgmental] The content here is mainly based on [[https://www.cs.cmu.edu/~fp/papers/mscs00.pdf][this paper]], except for the last sketchy part.
+
+[fn:adj] I found an answer on Stack Exchange saying that [[https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory][they correspond to the triangle identities of an adjunction]].
+
+[fn:reginf] The actual compiler also uses GC so that it can make its output as efficient as possible. I think this can be understood as an optimization, though.
+
+[fn:asm] More precisely, the operation of proving the conclusion of an elimination rule using the premises of the introduction rule and the additional premises of the elimination rule. Let's take the elimination rule of "\( \to \)" for example:
+
+\[
+\begin{prooftree}
+  \AxiomC{\( \Gamma \vdash A \to B \)}
+  \AxiomC{\( \Gamma \vdash A \)}
+  \RightLabel{\( (\to_{\mathsf{e}}) \)}
+  \BinaryInfC{\( \Gamma \vdash B \)}
+\end{prooftree}
+\]
+
+The elimination rule has \( A \to B \) and \( A \) as its premises. "The additional premises of the elimination rule" is the \( A \) here. The example of "\( \land \)" is a case in which we have 0 additional premises.

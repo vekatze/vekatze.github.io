@@ -1,0 +1,15 @@
+<header>
+    <h1>$title$</h1>
+    $if(published)$
+    <span class="metadata">$published$</span>
+    $endif$
+</header>
+$if(audio)$
+<p id="audio-player">
+    $if(cover)$
+    <img id="cover" class="cover" src="$cover$"/>
+    $endif$
+    <audio id="audio-player-internal" preload="auto" src="$audio$" />
+</p>
+$endif$
+$body$

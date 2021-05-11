@@ -1,0 +1,6 @@
+.stack-work/
+_cache/
+*.cabal
+stack.yaml.lock
+draft/
+.DS_Store

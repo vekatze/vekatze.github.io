@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ゼロのある音楽理論 - 以析比域</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <link rel="stylesheet" href="/style.css" />
+        
+        <script src="/asset/plyr.js"></script>
+        <link rel="stylesheet" href="/asset/plyr.css" />
+    </head>
+    <body>
+        <header>
+            <h1><a href="/index.html">以析比域</a></h1>
+        </header>
+        <main>
+            <header>
+    <h1>ゼロのある音楽理論</h1>
+    
+    <span class="metadata">2020-10-27</span>
+    
+</header>
+
+<p>千年前ならいざ知らず、今日になって音楽理論を学ぼうとする人であれば、おそらくほとんど誰もがあの「音程」の定義に一度はつまずくんじゃないだろうか。「……なんである音とそれ自身とのあいだの距離が0じゃなくて1なの？」</p>
+<p>自分はそうだった。もちろんあの定義にもなにかしらの必然性がありはするんだろうけど、少なくとも自分の関心から音楽理論をながめたとき、あの「距離で～す♡」みたいな顔をした、それでいて距離の公理すらみたさない謎の概念とよろしくやっていくのはしんどかった。「音を整数で表現して絶対値とればそれでよくね」などと思わずにはいられなかった。そしてこれは別に音程にかぎった話ではなくて、なんというか全体的に、もっと見通しよくやれるはずの場所で奇妙な遠回りを強いられている感じがぬぐえなかった。</p>
+<p>というわけでこの記事は、平易な数学の言葉でポピュラー音楽理論を書き直すものとなっている。音を整数として定義するところから出発して、既存の曲を実際にあれこれ調べてみるところまでをやる。使うのは加減乗除と同値類くらい。我ながら、なかなか使い勝手のよいものになったんじゃないかと思う。</p>
+<p>ところで、音楽理論についての本を1冊でも読んだことのある人であれば誰でも知っている通り、音楽理論って別にそんなにリロンリロンしたものではない。「音楽理論」の名のもとにおこなわれているのは、言ってみればあれこれの語彙を用意したうえで実際の楽曲にしばしばみられるパターンを分類するような作業であって、実態としてはノウハウ集に近い。</p>
+<p>それはこの記事についても同じことで、数学っぽい言葉を使っているからって、特になにか「非自明な命題が得られてスゴい！」みたいな話があるわけではない。証明なんかひとつもなくて、ただ定義とその背景にある音楽的直観とが続く。ようするに、用意される言葉の雰囲気がことなるってだけで、本質的には通常の音楽理論とたいして変わっていない。とくに気負わずに読めると思う。</p>
+<h2 data-toc=":include siblings :depth 2 :ignore (this)" id="toc">目次</h2>
+<div class="CONTENTS drawer">
+<ol>
+<li><a href="#十二平均律での一般論">十二平均律での一般論</a>
+<ol>
+<li><a href="#音">音</a><br />
+</li>
+<li><a href="#音階">音階</a><br />
+</li>
+<li><a href="#調">調</a><br />
+</li>
+<li><a href="#和音">和音</a><br />
+</li>
+<li><a href="#正則和音特異和音">正則和音・特異和音</a><br />
+</li>
+<li><a href="#進行">進行</a><br />
+</li>
+</ol></li>
+<li><a href="#いくつかの基本的な調とその性質">いくつかの基本的な調とその性質</a>
+<ol>
+<li><a href="#標準調">標準調</a><br />
+</li>
+<li><a href="#増調">増調</a><br />
+</li>
+<li><a href="#減調">減調</a><br />
+</li>
+</ol></li>
+<li><a href="#進行の分類">進行の分類</a>
+<ol>
+<li><a href="#調の内部での進行">調の内部での進行</a><br />
+</li>
+<li><a href="#調の外部への進行">調の外部への進行</a><br />
+</li>
+</ol></li>
+<li><a href="#既存曲をあれこれ調べてみる">既存曲をあれこれ調べてみる</a>
+<ol>
+<li><a href="#内田真礼youthful-beautiful">内田真礼『youthful beautiful』</a><br />
+</li>
+<li><a href="#相対性理論ミスパラレルワールド">相対性理論『ミス・パラレルワールド』</a><br />
+</li>
+<li><a href="#radioheadpyramid-song">Radiohead『Pyramid Song』</a><br />
+</li>
+</ol></li>
+<li><a href="#跋">跋</a></li>
+</ol>
+</div>
+<h2>十二平均律での一般論</h2>
+<h3>音</h3>
+<p><strong>定義:</strong> <code>Z</code> の元を <strong>原音</strong> とよぶ。 <code>Z/12Z</code> の元を <strong>音</strong> とよぶ。以下では原音 <code>z</code> の <code>mod 12</code> での同値類を <code>[z]</code> と書く。 □</p>
+<h3>音階</h3>
+<p><strong>定義:</strong> <code>Z/12Z</code> の狭義単調増加列であって、 <code>[0]</code> から始まるものを <strong>音階</strong> とよぶ。音階 <code>s</code> の <code>i mod (length s)</code> 番目の要素を <code>s&lt;i&gt;</code> と書く。 □</p>
+<p>たとえば <code>s := ([0], [4], [7])</code> は音階であり、</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>s&lt;0&gt; = [0]</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>s&lt;1&gt; = [4]</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>s&lt;2&gt; = [7]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>s&lt;3&gt; = [0]</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>s&lt;4&gt; = [4]</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>s&lt;5&gt; = [7]</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>s&lt;6&gt; = [0]</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>...</span></code></pre></div>
+<p>となる。他方、 <code>([0], [7], [4])</code> や <code>([1], [2], [3])</code> などは音階でない。</p>
+<h3>調</h3>
+<p><strong>定義:</strong> 音と音階のペアを <strong>調</strong> とよぶ。また、調 <code>(r, (s0, ..., sn))</code> に対し、集合</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{r + s0, ..., r + sn}</span></code></pre></div>
+<p>をその調の <strong>構成音集合</strong> とよぶ。 □</p>
+<p>たとえば、調 <code>([8], ([0], [4], [7], [9]))</code> について、その構成音集合は、</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>  {[8]+[0], [8]+[4], [8]+[7], [8]+[9]}</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>= {[8],     [0],     [3],     [5]}</span></code></pre></div>
+<p>である。</p>
+<h3>和音</h3>
+<p><strong>定義:</strong> <code>Z/12Z</code> の部分集合であって <code>[0]</code> を含むものを <strong>相</strong> とよぶ。 □</p>
+<p><strong>定義:</strong> 音と相のペアであって、相の濃度が <code>n</code> であるものを <strong>n和音</strong> またはたんに <strong>和音</strong> とよぶ。和音の第1成分をその和音の <strong>根</strong> とよぶ。和音 <code>(r, {t0, ..., tn})</code> に対し、集合</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>{r + t0, ..., r + tn}</span></code></pre></div>
+<p>をその和音の <strong>構成音集合</strong> とよぶ。相 <code>X, Y</code> について、その和集合をたんに <code>XY</code> とも書く。また、和音 <code>(r, t)</code> をたんに <code>rt</code> とも書く。 □</p>
+<p>基本的な相を次のように定めておく：</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>d := {[0], [3], [6]}  # diminished</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>m := {[0], [3], [7]}  # minor</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>M := {[0], [4], [7]}  # major</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>a := {[0], [4], [8]}  # augmented</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>- := {[0], [10]}</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>+ := {[0], [11]}</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>s := {[0], [2], [7]}  # suspended</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>S := {[0], [5], [7]}  # suspended</span></code></pre></div>
+<p>たとえば <code>[4]m- = ([4], {[0], [3], [7], [10]})</code> である。またこの和音の構成音集合は</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>{[4]+[0], [4]+[3], [4]+[7], [4]+[10]}</span></code></pre></div>
+<p>すなわち</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>{[4], [7], [11], [2]}</span></code></pre></div>
+<p>となる。</p>
+<p><strong>定義:</strong> 和音 <code>c</code> の構成音集合が調 <code>k</code> の構成音集合に含まれるとき、 <strong>和音 <code>c</code> は 調 <code>k</code> の和音である</strong> または <strong>和音 <code>c</code> は調 <code>k</code> において表現可能である</strong> という。 □</p>
+<p><strong>定義:</strong> 和音 <code>c1, c2</code> について、両者の構成音集合が同一であるとき、両者は <strong>同値</strong> であるといい、 <code class="verbatim">c1 ~ c2</code> と書く。また、 <code class="verbatim">c1 ~ c2</code> であるとき、和音 <code>c1</code> は和音 <code>c2</code> の <strong>転回形</strong> であるという。和音 <code>c</code> の転回形であって、根が <code>a</code> であるものを <code>c/a</code> と書く。 □</p>
+<p>たとえば和音 <code>c = ([4], {[0], [3], [7], [10]})</code> について、これの転回形 <code>c/[4+3]</code> を次のように構成することができる。まず、 <code>c</code> の構成音集合は</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>  {[4]+[0], [4]+[3], [4]+[7], [4]+[10]}</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>= {([4]+[3])-[3]+[0], [4]+[3], ([4]+[3])-[3]+[7], ([4]+[3])-[3]+[10]}</span></code></pre></div>
+<p>である。したがって和音</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>  ([4]+[3], {-[3]+[0], [0], -[3]+[7], -[3]+[10]})</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>= ([7], {[9], [0], [4], [7]})</span></code></pre></div>
+<p>はもとの和音と同一の構成音集合をもつ。これによって和音 <code>c/[4+3]</code> が構成される。この構成はもちろん <code>[0], [7], [10]</code> に対してもおこなうことができて、ゆえに上記の手順によって <code>c</code> の転回形として <code>c/[4+0], c/[4+3], c/[4+7], c/[4+10]</code> の4つを構成することができる。ここでもちろん <code>c = c/[4+0]</code> である。</p>
+<h3>正則和音・特異和音</h3>
+<p><strong>定義:</strong> 調 <code>(r, s)</code> に対し、和音</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>(r + s&lt;i&gt;, {s&lt;i + 2 * 0&gt; - s&lt;i&gt;, ..., s&lt;i + 2 * (n - 1)&gt; - s&lt;i&gt;})</span></code></pre></div>
+<p>を、この調における位置 <code>s&lt;i&gt;</code> の <strong>狭義正則n和音</strong> またはたんに <strong>狭義正則和音</strong> とよび、 <code>Reg(r, s, s&lt;i&gt;, n)</code> と書く。ある調の狭義正則n和音に同値な和音を、その調の <strong>正則n和音</strong> または <strong>正則和音</strong> とよぶ。ある調の和音であって正則和音でないものをその調の <strong>特異和音</strong> とよぶ。 □</p>
+<p>正則和音について補足しておく。上記のような正則和音の構成音集合は、</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>{r + s&lt;i + 2 * 0&gt;, ..., r + s&lt;i + 2 * (n - 1)&gt;}</span></code></pre></div>
+<p>となる。すなわち、正則和音とは、調のなかのある特定の音からスタートして、上方向に音を音階に沿って1つおきにとることで構成される和音である。たとえば、調</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>([5], ([0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]))</span></code></pre></div>
+<p>について、この調における位置 <code>[3]</code> の（狭義）正則4和音は、</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>  ([5] + [3], {[3] - [3], [5] - [3], [7] - [3], [9] - [3]})</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>= ([5] + [3], {[0],       [2],       [4],       [6]})</span></code></pre></div>
+<p>である。</p>
+<h3>進行</h3>
+<p><strong>定義:</strong> 調 <code>k</code> と和音 <code>c</code> のペア <code>(k, c)</code> であって、 <code>c</code> が <code>k</code> の和音であるものを <strong>状況</strong> とよぶ。状況の有限列を <strong>進行</strong> とよぶ。文脈から調が明らかであるときは状況 <code>(k, c)</code> をたんに <code>c</code> と書く。 □</p>
+<p><strong>定義:</strong> 進行 <code>p</code> における部分列 <code>(k1, c1) -&gt; (k2, c2)</code> について、 <code>k1 ≠ k2</code> であるとき、その部分列を <strong>転調</strong> とよぶ。 □</p>
+<h2>いくつかの基本的な調とその性質</h2>
+<h3>標準調</h3>
+<p><strong>定義:</strong> 音階 <code>std := ([0], [2], [4], [5], [7], [9], [11])</code> を <strong>標準音階</strong> とよぶ。調 <code>(r, std)</code> を <strong>r-標準調</strong> とよび、 <code>Std(r)</code> と書く。 □</p>
+<p>これはいわゆる「ドレミファソラシド」に対応している。「ド」から数えた「半音」の数がそれぞれの音に対応している。</p>
+<p>ある標準調を平行移動して得られる調について考えることはしばしば有用になる。そこで次のように定義しておく：</p>
+<p><strong>定義:</strong> <code>r</code>-標準調に対し、 <code>(r + a)</code>-標準調をもとの標準調の <strong><code>a</code>-関係調</strong> とよぶ。 □</p>
+<p>また、のちのち有用であるので、ここで <code>[z]</code>-標準調における正則4和音を列挙しておく。定義に沿って素直に計算すればよい：</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [0],  4) = ([ 0+z], {[0], [4], [7], [11]}) =  [0+z]M+</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [2],  4) = ([ 2+z], {[0], [3], [7], [10]}) =  [2+z]m-</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [4],  4) = ([ 4+z], {[0], [3], [7], [10]}) =  [4+z]m-</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [5],  4) = ([ 5+z], {[0], [4], [7], [11]}) =  [5+z]M+</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [7],  4) = ([ 7+z], {[0], [4], [7], [10]}) =  [7+z]M-</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [9],  4) = ([ 9+z], {[0], [3], [7], [10]}) =  [9+z]m-</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [11], 4) = ([11+z], {[0], [3], [6], [10]}) = [11+z]d-</span></code></pre></div>
+<p>正則和音のうちのいくつかは実際の曲のなかで主要な役割をはたす。これらに名前を与えておく：</p>
+<p><strong>定義:</strong> 標準調における位置 <code>[0]</code> の正則和音を <strong>主和音</strong> (tonic) とよぶ。標準調における位置 <code>[5]</code> の正則和音を <strong>下属和音</strong> (subdominant) とよぶ。標準調における位置 <code>[7]</code> の正則和音を <strong>属和音</strong> (dominant) とよぶ。 □</p>
+<p>ところで、正則和音は音階から音を1つおきにとることで構成されるものであった。これはすなわち、音階における <code>i</code> 番目の正則和音と、 <code>i ± 2</code> 番目の正則和音とが似通った構成音集合をもつということである。そして似通った構成音集合をもつとはすなわち似通った響きをもつということでもあり、このような背景のもと、次の定義がおこなわれる：</p>
+<p><strong>定義:</strong> 標準調における位置 <code>[9], [4]</code> の正則和音を <strong>代理主和音</strong> とよぶ。標準調における位置 <code>[2], [9]</code> の正則和音を <strong>代理下属和音</strong> とよぶ。標準調における位置 <code>[4], [11]</code> の正則和音を <strong>代理属和音</strong> とよぶ。 □</p>
+<p>主和音を記号 <code>T</code>, 代理主和音を記号 <code>t</code>, 下属和音を記号 <code>S</code>, 代理下属和音を記号 <code>s</code>, 属和音を記号 <code>D</code>, 代理属和音を記号 <code>d</code> で表すとき、標準調におけるそれぞれの正則和音の機能は次のようにまとめられる：</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [0],  4) =  [0+z]M+; T</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [2],  4) =  [2+z]m-; s</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [4],  4) =  [4+z]m-; t&amp;d</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [5],  4) =  [5+z]M+; S</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [7],  4) =  [7+z]M-; D</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [9],  4) =  [9+z]m-; t&amp;s</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>Reg([z], std, [11], 4) = [11+z]d-; d</span></code></pre></div>
+<p>ここで <code>t&amp;d</code> は「 <code>t</code> でも <code>d</code> でもある」の意である。 <code>t&amp;s</code> についても同様。</p>
+<p>以下、ある和音 <code>c</code> が主和音であることを、「和音 <code>c</code> の機能は <code>T</code> である」とも表現する。主和音以外のものについても同じように表現する。</p>
+<h3>増調</h3>
+<p><strong>定義:</strong> 音階 <code>aug := ([0], [3], [4], [7], [8], [11])</code> を <strong>増音階</strong> とよぶ。調 <code>(r, aug)</code> を <strong><code>r</code>-増調</strong> とよぶ。増調の正規和音を <strong>増和音</strong> とよぶ。 □</p>
+<p>増音階は、根から音を「3, 1, 3, 1, …」の間隔で並べたものになっている。</p>
+<p>増調 <code>([z], aug)</code> における正則和音を列挙すると次のようになる：</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>Reg([z], aug, [0],  3) = [z + 0]a</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>Reg([z], aug, [3],  3) = [z + 3]a</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>Reg([z], aug, [4],  3) = [z + 4]a</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>Reg([z], aug, [7],  3) = [z + 7]a</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>Reg([z], aug, [8],  3) = [z + 8]a</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>Reg([z], aug, [11], 3) = [z + 11]a</span></code></pre></div>
+<h3>減調</h3>
+<p><strong>定義:</strong> 音階 <code>dim := ([0], [2], [3], [5], [6], [8], [9], [11])</code> を <strong>減音階</strong> とよぶ。調 <code>(r, dim)</code> を <strong><code>r</code>-減調</strong> とよぶ。減調の正規和音を <strong>減和音</strong> とよぶ。 □</p>
+<p>減音階は、根から音を「2, 1, 2, 1, …」の間隔で並べたものである。</p>
+<p>減調 <code>([z], dim)</code> における正則和音を列挙すると次のようになる：</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [0],  3) = [z + 0]d</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [2],  3) = [z + 2]d</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [3],  3) = [z + 3]d</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [5],  3) = [z + 5]d</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [6],  3) = [z + 6]d</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [8],  3) = [z + 8]d</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [9],  3) = [z + 9]d</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>Reg([z], dim, [11], 3) = [z + 11]d</span></code></pre></div>
+<h2>進行の分類</h2>
+<p>楽曲を分析するにあたり、頻出するパターンに名前があると便利である。以下ではそういった名前を提供する。</p>
+<h3>調の内部での進行</h3>
+<h4>正則和音だけによるもの</h4>
+<p>以下、進行を書くにあたって、和音を書くべき場所に <code>T</code> や <code>s</code> などの記号が書いてあるときは、それは当該の機能を持つ任意の正則和音を表現したものとする。また、 <code>D|d</code> などは「 <code>D</code> または <code>d</code> 」の意とする。</p>
+<p><strong>定義:</strong> <code>r</code>-標準調における以下の進行を <strong>終止</strong> とよぶ。</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>D|d -&gt; T|t</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>S|s -&gt; T|t</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>S|s -&gt; D|d -&gt; T|t</span></code></pre></div>
+<p><code>r</code>-標準調における以下の終止をとくに <strong>完全終止</strong> と呼ぶ。</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>D|d -&gt; T</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>S|s -&gt; T</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>S|s -&gt; D|d -&gt; T</span></code></pre></div>
+<p><code>r</code>-標準調における以下の終止をとくに <strong>偽終止</strong> と呼ぶ。</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>D|d -&gt; t</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>S|s -&gt; t</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>S|s -&gt; D|d -&gt; t</span></code></pre></div>
+<p>□</p>
+<p>音楽的直観としては、完全終止は素直に曲の終わりをあたえるとされる一方で、偽終止はどこか終わっていないような、意外な感じをあたえるとされる（私もそう直観する）。</p>
+<p>基本的には、楽曲は上記の終止が組み合わせられたものとして分析されることになる。というか、そうした枠組みのもとで曲を調べていく。まあ世の中にはぜんぜん終止してない曲も無数にあるので、上記の形式に当てはまっていないからといってそこまで気にする必要はない。「あ、ここ、通常の終止になってるね」と気付けるようになると構造がみてとりやすくなってうれしい、くらいでよい。</p>
+<p>関連して明言しておくと、別に上記以外の進行が誤りというわけではない。たとえば <code>D -&gt; S</code> の進行は古典和声で「禁則進行」とよばれるものに該当しているが、ポピュラー音楽ってのは気持ち悪い響きが気持ちいい世界であり、たとえば曲を書いているときに禁則進行のほうが善いと感ぜられたならば、それはもう迷わずそっちを選べばよい。</p>
+<p>ただ、特殊なものを特殊なものとして認識することには一定の美徳がたぶんある。意図をもって逸脱しましょう。</p>
+<h4>特異和音にもよるもの</h4>
+<p>特異和音のなかでも和音 <code>[z]S</code> を利用した進行はしばしば用いられる。音楽的直観としては、この和音は「期待させる音について、それを鳴らすのを遅らせる」ものである。たとえば通常の終止 <code>[7]M- -&gt; [0]M</code> について、これを <code>[7]M- -&gt; [0]S -&gt; [0]M</code> に書き換える、といった仕方で用いられる。これによって遅延解決の響きが得られる。 <code>[7]M-</code> の不安定な響きが解決されるのを期待させておいて、その解決を <code>[0]S</code> でいったんおあずけするような雰囲気になる。</p>
+<p>もちろん別に使う場所は <code>[0]</code> じゃなくてもよくて、 <code>[2]</code> または <code>[7]</code> でもいい（これらはどちらも現在考えている標準調の和音になる）。 <code>[2+z]S -&gt; [2+z]m-</code>, という具合である。</p>
+<p>また、もう一つ、 <code>[z]S</code> ほどではないが、 <code>[z]s</code> もたまに用いられる。この和音がもつ音楽的直観は <code>[z]S</code> と同様で、つまり解決の遅延である。音楽的直観がだいたい一緒なら <code>[z]S</code> だけつかってりゃよくね、という気がしそうなところだが、これは案外そうでもない。たとえば</p>
+<ul>
+<li><code>[0]S -&gt; [0]M</code><br />
+</li>
+<li><code>[0]s -&gt; [0]M</code><br />
+</li>
+</ul>
+<p>という2つの遅延解決を比べてみると、前者では構成音が <code>[5] -&gt; [4]</code> と下がる方向に動くのに対し、後者では <code>[2] -&gt; [4]</code> と上がる方向に動く。これもあって、前者がいくらかリラックスした響きをまとう一方で、後者はいくらか元気な響きをまとう。こうした響きの差異はしばしば有用で、曲想に合わせて使い分けてゆきましょう、という話になる。</p>
+<h3>調の外部への進行</h3>
+<h4>別な標準調をとるもの</h4>
+<p>ある標準調を基準としたとき、別な関係調の和音であって「なんだかうまくいく」もの、よく用いられるものはおおむね決まっている。ここではそれらの慣例名をまとめておく。</p>
+<p><strong>定義:</strong> <code>[3]</code>-関係調における位置 <code>[2]</code> の和音を、もとの標準調における <strong>サブドミナント・マイナー</strong> とよぶ。この和音はもとの標準調で言うところの <code>[5]m-</code> の和音になり、その機能は <code>s</code> とされる。 □</p>
+<p><strong>定義:</strong> <code>[6]</code>-関係調における位置 <code>[7]</code> の和音を、もとの標準調における <strong>裏コード</strong> とよぶ。この和音はもとの標準調で言うところの <code>[1]M-</code> の和音になり、その機能は <code>d</code> とされる。 □</p>
+<p><strong>定義:</strong> <code>[8]</code>-関係調における位置 <code>[5]</code> の和音を、もとの標準調における <strong>ナポリの六度</strong> とよぶ。この和音はもとの標準調で言うところの <code>[1]M+</code> の和音になり、その機能は <code>d</code> とされる。 □</p>
+<p><strong>定義:</strong> <code>[9]</code>-関係調における位置 <code>[0]</code> の和音を、もとの標準調における <strong>ピカルディの三度</strong> とよぶ<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>。この和音はもとの標準調で言うところの <code>[9]M+</code> の和音になり、その機能は <code>t</code> とされる。 □</p>
+<p><strong>定義:</strong> <code>z</code> を <code>std</code> の要素とする。このとき、 <code>[z]</code>-関係調における位置 <code>[7]</code> の和音を、位置 <code>[z]</code> の和音についての <strong>二次属和音</strong> とよぶ。この和音はもとの標準調でいうところの <code>[z+7]M-</code> の和音になり、その機能は位置 <code>[7]</code> の和音に対する <code>d</code> とされる。 □</p>
+<p>上記の和音はしばしばまるでもとの標準調にそなわった正則和音であるかのように用いられる。これらの特殊な和音も含め、ある標準調においてよく用いられる和音を位置ごとにまとめると次のようになる。これは楽曲分析にあたって有用な図になる：</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a> position | regular       secondary-dominant                other</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>----------+---------------------------------------------------------------</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    [0]   |  [0]M+               [0]M-</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    [1]   |                                             [1]M-   [1]M+</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    [2]   |  [2]m-               [2]M-</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    [3]   |---------------------------------------------------------------</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    [4]   |  [4]m-               [4]M-</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    [5]   |  [5]M+                                          [5]m-</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    [6]   |                      [6]M-</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    [7]   |  [7]M-              ([7]M-)</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    [8]   |---------------------------------------------------------------</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    [9]   |  [9]m-               [9]M-                      [9]M+</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>   [10]   |---------------------------------------------------------------</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>   [11]   | [11]d-              [11]M-</span></code></pre></div>
+<p>なお、もちろん別に上にある和音（を第2成分にもつような状況）以外への転調が禁じられているわけではない。特に、 <code>[±3]</code>-関係調、 <code>[±5]</code>-関係調への転調は自然におこなうことができ、しばしばみられる。</p>
+<p>上記以外に特筆すべき転調のパターンとしては、 <code>S</code> の和音を利用したものが挙げられる。ポイントは、 <code>[2+z]S</code> を単独でみたとき、これは <code>[z]</code>-標準調における和音 <code>[2+z]S</code> なのか、それともその <code>[2]</code>-関係調における和音 <code>[0+(z+2)]S</code> なのか、区別がつかないということである。つまり、</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>key:[z]     key:[z+2]     key:[z+2]</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>-------     ----------    -----------</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>[2+z]S   =  [0+(z+2)]S -&gt; [0+(z+2)]M+</span></code></pre></div>
+<p>という具合で <code>[2]</code>-関係調への転調をなめらかに実現することができる。これは通常の <code>[z]</code>-標準調における遅延解決と比べてみるとよりわかりやすいかもしれない：</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>key:[z]     key:[z+2]     key:[z+2]</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>-------     ----------    -----------     ([2+z]Sの区別不可能性による転調 + [2]-関係調での位置[0]での遅延解決)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>[2+z]S   =  [0+(z+2)]S -&gt; [0+(z+2)]M+</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>key:[z]                   key:[z]</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>------                    -------         (もとの標準調での位置[2]での遅延解決)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>[2+z]S                 -&gt; [2+z]m-</span></code></pre></div>
+<p>転調によって <code>m</code> の和音に解決するかわりに <code>M</code> の和音に解決していることがみてとれると思う。</p>
+<p>その他、それ以外の和音についても、まあ好きに転調すればよろしい。</p>
+<h4>別な非標準調をとるもの</h4>
+<p>その他、関係調でなく、増調や減調へと転調することももちろん可能である。標準調における和音と構成音がよく似た増和音・減和音を利用したくなったときにそうした転調をおこなうわけだけど、「じゃあいつそんなよくわかんない和音がほしくなるの」ってのはごくまっとうな疑問だと思う。実際、鳴らしてみるとわかるが、増和音も減和音もなかなか異様な響きをもった代物で、一見するとあつかいづらそうではある。</p>
+<p>結論から言うと、基本は「1だけ変わるような音の動き」を実現したいときである。増和音 <code>[z]a = ([z], {[0], [4], [8]})</code> について考える。まず、 <code>M</code> と <code>m</code> はともに <code>[7]</code> を含んでいた。これはすなわち、 <code>M</code> や <code>m</code> の和音から、それと根を同一とするような増和音へといたるような進行を考えると、 <code>[7] -&gt; [8]</code> といううなめらかな進行が実現できることになる。ゆえにたとえば</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>[z]m -&gt; [z]a -&gt; [z+2]M</span></code></pre></div>
+<p>のような進行をとれば、この進行において、構成音の一部が</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>[z+7] -&gt; [z+8] -&gt; [z+7+2]</span></code></pre></div>
+<p>つまり</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>[z+7] -&gt; [z+8] -&gt; [z+9]</span></code></pre></div>
+<p>のように、なめらかに上行することになる。こうした動きはたとえば曲をゆっくりと緊張させたいときに有用である。</p>
+<p>減和音 <code>[z]d = ([z], {[0], [3], [6]})</code> についても基本は同様で、こちらは下がる方向の動きになる。まあようするに、これらの和音および調は、基本的にはなめらかな動きを作りたいときに利用すればよろしい。もちろんそれ以外の場面でつかっても牢屋にぶち込まれたりはしないし、好きに鳴らせばいいんだけど。</p>
+<p>ところで減和音にはもうひとつ特筆すべき用法がある。標準調を導入したときにみたとおり、 <code>[11+z]d</code> は代理属和音であった。ここで減和音 <code>[11+z]d</code> は <code>[z]</code>-減調における正規和音であるので、減調において「1つ飛んだ」場所にある和音 <code>[11+z±3]d</code> と似た響きを示す。つまり <code>[11+z]d</code> は <code>[8+z]d</code> や <code>[2+z]d</code> と似た響きを示す。これによって、根が <code>[2+z]</code> や <code>[8+z]</code> であるような和音であって、属和音にいくらか近い機能をもったものが得られる。これは和音の根をなめらかに動かしたいときなどにけっこう便利だったりする。</p>
+<h2>既存曲をあれこれ調べてみる</h2>
+<p>以下ではここまでに用意した語彙を用いて実際に既存の曲を調べていく。が、その前に、いくつかの言葉を用意しておく。まず、楽曲に対し、それに合う進行をあたえること、およびそれにともなう行為を楽曲の <strong>分析</strong> とよぶことにする。また、進行に対し、そこになんらかの構造や機能を見出すこと、およびそれにともなう行為を進行の <strong>総合</strong> とよぶことにする。そしてさらに、楽曲を分析して得られた進行を総合する行為、およびその結果を楽曲の <strong>解釈</strong> とよぶことにしてみる。</p>
+<p>注意すべき点として、分析の結果は一意的でない。たとえばいわゆる「ド・ミ・ソ」の音が鳴っていたとする。この和音はたとえば <code>[0]</code>-標準調における位置 <code>[0]</code> の正則和音 <code>[0]M</code> として解釈することができる。けれども他方、別に、この和音を調</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>([3], ([0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]))</span></code></pre></div>
+<p>における特異和音のひとつであると分析することをさまたげるものは、論理的にはなにもない。——が、それが楽曲のもつ響きを説明するにあたって有用であるか、もとの楽曲に合っているかはまた別の話である。</p>
+<p>分析は別に作曲者の手によって楽譜に記された一連の記号列を再構成すべくしてあるような行為ではない。むしろそれは、自分がある楽曲をどのように理解したのか、どのような関節に沿って切り離したのかを表現する行為である（分節化）。ある和音が上記のような奇妙な仕方で分析されたとして、それはその分析をおこなった人がその和音を奇妙な仕方で理解したことのしるしである。</p>
+<p>言い換えるなら、解釈とは「この曲はこういう構造をしているからこういう響きをしている」ではなく「私はこういう響きを感じたんだけど、これは私がこういう構造を曲のなかに見出したことによると思う」を表現する行為である。すなわち解釈は一種の自己紹介であって、正しい解釈と正しくない解釈があるというよりは、説得的な解釈とそうでもない解釈とがある。</p>
+<p>たとえば、ベースが派手に動く楽曲がどのような進行をもつかをめぐっては、しばしば意見がばらつく。これはごく自然なことである。ベースが激しく動くことはそのぶんだけベースラインが不明瞭になることであり、ベースラインが不明瞭になることは進行が不明瞭になることであるから。「正しい進行があるんだけど、それがわかりづらくなっている」というよりは、ベースの激しい動きによって、いわば不明瞭な進行そのものがその曲の「真の」進行になっている。こうした楽曲を分析するとき、われわれはそもそもからして不明瞭な進行を前にして明瞭な進行をひとつ示しているわけで、それはまあ、意見がばらつくのも当然であろう。そこに正誤を問うてもあまり得るところはあるまい。</p>
+<p>だから自分で楽曲を調べて作ってみた進行が、たとえばなにか検索してみてひっかかった進行とちがっていたからといって、間違えてしまったとか思う必要は基本的にはない（そりゃ、調が違うとかになるとさすがに修正は必要だけど）。むしろそういうときにやるべきは、その誰かによる進行がどのような解釈のもとにあるかを考えること、それが自分の解釈と比べてどのようにすぐれているか、どのようにすぐれていないかを比較検討することだろう。</p>
+<p>ようするに、なにが言いたいかって、「楽曲の解釈においてはあまりにも開かれた選択を迫られる場面が多々あるけれど、解釈が自己紹介である以上、そういうときに澪標になるのはひとえに自分が楽曲から感じ取った響きだけだよ」ってことである。そしてまた、この「どう感じたかが大事」が、なにかロマン主義的なスローガンにとどまるものじゃなく、もっとドライな事実、テクニカルな次元の話だってことである。伝わるだろうか。</p>
+<p>まあ、なんにせよ、実際の曲を調べてみましょう。</p>
+<h3>内田真礼『youthful beautiful』</h3>
+<p><a href="https://www.youtube.com/watch?v=z6-MIsN8gwE">https://www.youtube.com/watch?v=z6-MIsN8gwE</a></p>
+<p>最初の題材はこの素直でポップな曲にしてみる（なんか走ったりする感じのPVですね）。構造を調べていくとわかるが、この曲は、込み入った技法をひかえつつ、曲想と絡み合った形で最低限の意外性を組み込んだようなものになっていて、私はこういうものもたいへん好ましいと思う。リラックスした美しさがある。</p>
+<p>以下、実際に解釈をおこなっていく。</p>
+<h4>調の確定</h4>
+<p>だいたいの曲は標準調で書かれる。この曲もそうであると仮定し、まずはどの標準調にあるのかを確定していく。そのためには曲の中で使われている音を集めてゆけばよい。</p>
+<p>歌い出しの「崩れてしまいそう」は <code>[0], [2], [3], [5], [10]</code> から構成されている（ここで、いわゆる「ド」を <code>[0]</code>, 「ドのシャープ」を <code>[1]</code>, …, 「シ」を <code>[11]</code> に対応づけている。以下同じ）。</p>
+<p>少し行ったところの「誰も知らないんだな」みたいなフレーズはありがたくて、こういう音階を素直に上にたどっていってくれるようなやつがあると音が拾いやすい。ここは <code>[0], [2], [3], [5], [7], [8]</code> から構成されている。</p>
+<p>両者を合わせて、 <code>[0], [2], [3], [5], [7], [8], [10]</code> が利用可能な音であることがわかる。あとはこれが構成音集合であるような <code>r</code>-標準調をみつければよい。どう見つけてもよいが、手っ取り早いのはこれら利用可能な音に含まれる <code>([2], [3])</code> および <code>([7], [8])</code> という2つの「距離1のペア」に注目する路線だと思う。一般に、 <code>r</code>-標準調は</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>(r, ([0], [2], [4], [5], [7], [9], [11]))</span></code></pre></div>
+<p>という形をしたものであった。つまり、 <code>r</code>-標準調は距離1の音のペアとして <code>(r+[11], r+[0])</code> と <code>(r+[4], r+[5])</code> をもつことになる。これと <code>([2], [3])</code> および <code>([7], [8])</code> を比べてやれば、 <code>[3]+[5] = [8]</code> が成立することにより <code>r=[3]</code> であることがわかる。</p>
+<p>というわけでこの曲は <code>[3]</code>-標準調である。</p>
+<h4>イントロ</h4>
+<p>イントロを調べていく。分析について。まず最初のギターのｼﾞｬｰﾝという和音の根は <code>[3]</code> である（単音であるかのように聞けばよい）。他の楽器が入ってくるところは、ベースに注目すれば <code>[8] -&gt; [10] -&gt; [0] -&gt; [3]</code> の2回の繰り返しであるとわかる。これは次のように書き換えても同じことである：</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>[0+3] -&gt; ([5+3] -&gt; [7+3] -&gt; [9+3] -&gt; [0+3]) * 2</span></code></pre></div>
+<p>こう書き換えてやるとそれぞれの和音の機能がみてとりやすくなる。つまり、 <code>[3]</code>-標準調の正則和音だけが使用されていると仮定すれば、イントロの進行は、</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>[0+3]M+ -&gt; ([5+3]M+ -&gt; [7+3]M- -&gt; [9+3]m- -&gt; [0+3]M+) * 2</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  T           S          D         t&amp;s         T</span></code></pre></div>
+<p>であるということになる。 <code>0, 5, 7, 9</code> の部分に注目するって話。 <code>[n+3]</code> の形に書き換えてやることで <code>[0]</code>-標準調における正則和音の議論へと話を帰着することができる。</p>
+<p>あとはこの進行を手元の楽器等で鳴らしながら曲で鳴っている音との整合性をチェックする。問題がなければイントロの分析はこれで終了する。今回は実際問題なさそうなのでイントロの分析がここで終わる。</p>
+<p>総合について。まずここでの進行における <code>t&amp;s</code> の機能を <code>t</code> とみなすことで、イントロの <code>S -&gt; D -&gt; t</code> の部分を偽終止として理解する。つまり <code>S -&gt; D -&gt; t -&gt; T</code> を、 <code>S -&gt; D -&gt; t</code> までの偽終止でやや意外な、まだ続くようなニュアンスを出しておいた上で、 <code>T</code> できちんと終了する、というサイクルであると理解する。</p>
+<p>この総合が実際の音楽を説明しているかを検討する。実際にイントロを聞き直してみる。まず冒頭のｼﾞｬｰﾝ2回はよろしい。主和音の安定感がある。では <code>S -&gt; D -&gt; t -&gt; T</code> の繰り返しのほうはどうかと聞いてみると <code>t</code> にあたる場所で、たしかになにかが続きそうなニュアンスが残っていること、およびその続きそうなニュアンスが <code>T</code> で解決していることが—「私の」音楽的直観によって—確認できる。なのでイントロの総合がこれで終わる。</p>
+<p>ちなみに、この部分の進行は <code>mod 12</code> を利用して</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>[5+3]M+ -&gt; [7+3]M- -&gt; [9+3]m- -&gt; [12+3]M+</span></code></pre></div>
+<p>と書き直すとより音楽的直観に沿ったものになると思う。つまり、下属和音からスタートしてどんどん上がっていくような進行。さらに言うと、標準調における位置 <code>[11]</code> の正則和音はあまり用いられないので、結局、これは下属和音から音階に沿って1つずつ順番に上行するような進行だと言ってしまってよい。</p>
+<p>まとめておくと、このイントロの音楽的意義は、偽終止を「上側」の主和音によって二重に解決することで、気分を高揚させるような機能を実現しているところにある（と「私は」思う）。</p>
+<h4>Aメロ（1）</h4>
+<p>Aメロを調べていく。分析について。「崩れてしまいそう」の後ろのギターに注目して、 <code>[8] -&gt; [10] -&gt; [0] -&gt; [3]</code> が見える。それ以降も同様で、また特に変な技法が用いられているような響きも存在しない。というわけで進行はイントロと同様のものとして分析される。総合も同様。</p>
+<h4>Bメロ（1）</h4>
+<p>Bメロを調べていく。まず「思い出せなくっても」から「繋がれていた」までは、ベースが素直に、 <code>[8] -&gt; [10] -&gt; [0] -&gt; [3]</code> と上行していく。とくに奇妙な響きもなく、ゆえにここもイントロと同様の進行として分析・総合される。</p>
+<p>続く「明日明後日」について。分析としては、ここでの進行をとるにはベース（または右チャンネルのギターのアルペジオの最低音）に注目すればよく、 <code>[5] -&gt; [7] -&gt; [8]</code> が見える。で、これは</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>[2+3] -&gt; [4+3] -&gt; [5+3]</span></code></pre></div>
+<p>と書き換えても同じことで、だからここは正規和音によって</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>[2+3]m- -&gt; [4+3]m- -&gt; [5+3]M-</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  s         t&amp;d         S</span></code></pre></div>
+<p>と仮定され、とくに奇妙な響きもないので、この部分は上記のように分析される。</p>
+<p>総合としては、真ん中の <code>t&amp;d</code> をどちらで解釈するかという問題はあるが、ここにはあまりこだわらなくてもよいように思う。むしろこの箇所の要点は終止らしい終止をおこなっていないということそれ自体である。和音の根自体が <code>[5] -&gt; [7] -&gt; [8]</code> と上行していることとも相まって、ここではポップスのBメロらしい盛り上がっていく感じ、サビを期待させる感じが演出されていると言ってよい。</p>
+<p>「その先だって 隣で」について。分析としては、まず進行は <code>[5] -&gt; [7]</code> までは一緒。「先だって」の「て」は <code>[8]</code> で、続く「隣で」で <code>[7]</code> に下行している（ベースに注目）。だからまとめると <code>[5] -&gt; [7] -&gt; [8] -&gt; [7]</code> となって、で、これは</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>[2+3] -&gt; [4+3] -&gt; [5+3] -&gt; [4+3]</span></code></pre></div>
+<p>と書き換えても同じことで、だから正規和音によって</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>[2+3]m- -&gt; [4+3]m- -&gt; [5+3]M+ -&gt; [4+3]m-</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  s         t&amp;d         S         t&amp;d</span></code></pre></div>
+<p>と仮定され、奇妙な響きの和音もないので、こうしてBメロの分析が終わる。</p>
+<p>総合であるが、注目するべきは、これまでの進行がすべて上行していたという点である。イントロから始まってここにいたるまで、ひとつの例外もなく。</p>
+<p>にもかかわらず「その先だって」の直後、サビの直前というポップス的に一番大事なところで初めての下行がおこなわれる。偽終止 <code>S -&gt; t</code> と読んでよかろう。これは聞いている人の意表を突くものである。そしてこっちが下行および偽終止にびっくりしているところ、スキをつくったところに、内田真礼が「なんか問題ある？」とでも言わんばかりに、のびのびとした歌声をめちゃめちゃ楽しそうに聞かせてくる。曲想と構造がきれいに噛み合っており、これがBメロ末尾の美しさになっている。のびのびとした内田真礼によってのみ救いうるものがある。</p>
+<p>まとめておくと、このBメロの音楽的意義は、これまでの上行を引き継ぐようにして上行を繰り返したうえで、サビに入る直前で曲の中で初めての下行をおこない、意外性をもって受け手のガードを崩すところにある。「明日明後日」以降で終止らしい終止が最後の特殊なもの以外に存在しないこともこの意外性に寄与していると言ってよい。</p>
+<h4>サビ（1）</h4>
+<p>サビを調べていく。まず「君が待っていてもいなくても走るよ」であるが、分析としては、ベースに注目して <code>[8] -&gt; [10] -&gt; [0] -&gt; [3]</code> が見える。特にこれといって特殊な響きもなく、ゆえにイントロと同様の進行として分析される。</p>
+<p>総合について。ここのポイントは「凝ったことをしない」ことそれ自体であるといってよい。工夫はすでに直前において終わっており、ここではリラックスした進行のなかで内田真礼のもつ善が存分に発揮され、ガードを崩された聴衆は「君が待っていてもいなくても走るよ」をもろに食らう。われわれはケアルガで死ぬゾンビになる。</p>
+<p>「このまま足を動かせば光になる」について。分析としては、まずベースに注目して <code>[8] -&gt; [7] -&gt; [0] -&gt; [10] -&gt; [3]</code> が見える。そしてここにはこれといって奇妙な響きはなく、なのでこれは正則和音から</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>[5+3]M+ -&gt; [4+3]m- -&gt; [9+3]m- -&gt; [7+3]M- -&gt; [0+3]M+</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  S         t&amp;d        t&amp;s         D          T</span></code></pre></div>
+<p>と分析してよい。</p>
+<p>総合としては、まず最後の <code>D -&gt; T</code> の部分が完全終止であることが目を引く。他方で前半の3つは <code>S -&gt; d -&gt; t</code> と読めば偽終止である。つまりこのフレーズは2つの基本的な終止を組み合わせたものとなっている。これは実際の響きにも整合的であるように（「私には」）思われる。偽終止のあとにすぐさまもう一回コンパクトな <code>D -&gt; T</code> を入れることで二重に終止するような進行になっている。素直な響きのための素直な進行であると言ってよい。</p>
+<p>「すぐに消えそうな一瞬はこんなにも」について。ここは聞けば分かる通り「君が待っていてもいなくても走るよ」と同じ。</p>
+<p>「美しかったか 愛せていたか」について。分析としては、まずベースから <code>[8] -&gt; [10] -&gt; [7] -&gt; [0]</code> が拾える。そしてまた奇妙な響きも特にないので、</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>[5+3]M+ -&gt; [7+3]M- -&gt; [4+3]m- -&gt; [9+3]m-</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  S          D         t&amp;d        t&amp;s</span></code></pre></div>
+<p>と分析することができる。実はこの形式の進行はポップスで多用されることで有名で、王道進行という名前があたえられていたりする。すなわち、 <code>r</code>-標準調における王道進行とは、進行</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>[5+z]M+ -&gt; [7+z]M- -&gt; [4+z]m- -&gt; [9+z]m-</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  S          D         t&amp;d        t&amp;s</span></code></pre></div>
+<p>のことである。</p>
+<p>総合であるが、もちろん仮に「これは王道進行である」とだけ言ってみせたとして、これでは特になにも説明したことにはならない。もうすこし詳しく見てみる必要がある。王道進行は、構造としては偽終止 <code>S -&gt; D -&gt; t</code> をさらに代理主和音 <code>t</code> で引き継ぐようなものになっている。「愛せて」のタイミングを偽終止にしておいて、ややなにかが引っかかる印象を残したうえで、それをさらにまたなにかが引っかかる印象の代理主和音 <code>[9+3]m-</code> につないでいる。これによって、まず「解決しないままに発展していく」みたいな響きが生まれている、と言えそうではある。</p>
+<p>他方、王道進行の実際の響きとしてはむしろ <code>S -&gt; D</code> と <code>t&amp;d -&gt; t&amp;s</code> とがそれぞれペアになっているようにも聞こえる。これは「前半2つの和音が <code>M</code> の明るい和音で、かつ後半2つが <code>m</code> の暗い和音であることによる」と言ってもたぶんそれほど外していないと思う。今回の曲の中ではこちらの機能のほうが強く聞こえる。</p>
+<p>以上を踏まえ、結局、この部分は歌詞における「美しかったか」と「愛せていたか」の対比構造を王道進行のもつ前半/後半の対比構造に重ね合わせることで、「愛せていたか」のほうの問いをより内省的に、かつ発展的に響かせているものである、と総合しておく。</p>
+<p>「心の穴をみたして」について。分析としては、ベースに注目して <code>[8] -&gt; [10]</code> が拾える。奇妙な響きもないので、</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>[5+3]M+ -&gt; [7+3]M-</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  S          D</span></code></pre></div>
+<p>と分析される。</p>
+<p>総合としては、ここは <code>D</code> っていう本来はなにかがあとに続くはずのもので終わる形になっている。続きを予感させる形で終わっていることがわかる。</p>
+<p>ところで、この部分の進行 <code>[5+3]M+ -&gt; [7+3]M-</code> は、「素朴に」やっていたらBメロの末尾にあるはずだったものでもあるわけで、そこでいったん予想を裏切って出し渋った進行をサビの最後で与えている、というふうに理解できなくもない。が、たぶんこれはすこし読みすぎだと思う。</p>
+<p>まとめておく。このサビの音楽的意義は、奇妙な響き、工夫のたぐいを極力排し、なるべく素直な進行のもと、Bメロ末尾の慣性にのってボーカルのよさをまっすぐ届けるところにある。進行としてはおおむねこれまでに出現したものに王道進行を差し入れた形で、言ってみれば「普通の」やつなんだけど、けれどもこの進行が「普通」だってことそれ自体がおそらくは狙い通りのものなのであり、これが「君が待っていてもいなくても走るよ」のリラックスした美しさに繋がっている。</p>
+<h4>間奏</h4>
+<p>イントロと同じ。</p>
+<h4>Aメロ（2）</h4>
+<p>「離れるくらいなら」について。けっこう解釈のぶれそうなところではある。ベースもぐりぐりと動いている。</p>
+<p>まず冒頭の5つの和音が見える箇所であるが、私はここを「1番と本質的には一緒で、ただアレンジが激しく動いているだけ」と聞く。というわけでそしてまさにその表現として、1番と同じ進行をとってみる。つまりこの部分のめまぐるしい和音の動きを <code>[5+3]M+</code> の一発で乗り切ることを考える。実際の曲と同時に鳴らしてみてみると、これが案外違和感を生じない。というわけで、まずこの5つの和音の部分については1番のままの <code>[5+3]M+</code> として分析する。</p>
+<p>1番と同様であれば、続くのは <code>[7+3]M-</code> である。これはどうか。実際に鳴らしてみると、悪くない。が、2番では1番よりも2拍先にベースが <code>[0+3]</code> を鳴らしており、それゆえ <code>[7+3]M-</code> の時間は2拍短くなり、続く <code>[9+3]m-</code> が2拍長く鳴らされることになる。けっきょく、進行としては、</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>[5+3]M+ -&gt; [7+3]M -&gt; [9+3]m-</span></code></pre></div>
+<p>という1番と同一の分析が得られる。総合も同様。</p>
+<p>「離れるくらいなら」以降は明らかに1番と同じで、全体としてAメロの進行は1番と同一のものとして分析される。総合もまた1番と同様となる。</p>
+<h4>Bメロ（2）</h4>
+<p>1番と同じ。</p>
+<h4>サビ（2）</h4>
+<p>1番と同じ。「それだってのに」、好き。</p>
+<p>ちなみに2番では王道進行のところで歌詞の対比構造が崩れている。が、それでも王道進行の力は健在で、そのせいか「思い出せるよ」と「なにがあっても」が互いに強く関係したものであるかのように響く。もし「なにがあっても」が「思い出せるよ」を修飾しているかのように聞こえたとしたら、それはたぶんこれが理由である。</p>
+<h4>間奏</h4>
+<p>間奏について。まずリードギターがなめらかに上行していくところを分析していく（関係ないけどこのリードギターはたいへんよい趣味をしていると思う）。ここではベースかリズムギターに注目して、まず <code>[8] -&gt; [10]</code> がとれる。同じフレーズが繰り返されて、これも <code>[8] -&gt; [10]</code> である。で、そのあとにもう一つ <code>[8] -&gt; [10]</code> がおこなわれている（最後のギターのｼﾞｬｯｼﾞｬｯｼﾞｬｯが <code>[10]</code> になっている）。というわけで、この箇所は</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>[5+3]M+ -&gt; [7+3]M- -&gt; [5+3]M+ -&gt; [7+3]M- -&gt; [5+3]M+ -&gt; [7+3]M-</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  S          D          S          D          S          D</span></code></pre></div>
+<p>と分析される。</p>
+<p>総合としては、ここは <code>S -&gt; D</code> を繰り返すことで明確な解決を避けるものになっている。進行のほうが停滞したままリードギターが上行していくこともあり、どことなく不思議な遊離感もある。ちなみにこの <code>S -&gt; D</code> はサビ末尾の進行そのものであり、狙っているかどうかはよくわからないが、事実としてサビを引き継ぐ形になっている。</p>
+<p>続いてピアノがきらきらするところを分析していく。ここはベースもリズムギターもわかりやすくて、 <code>[0] -&gt; [7] -&gt; [10]</code> を繰り返している。つまりここは</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>[9+3]m- -&gt; [4+3]m- -&gt; [7+3]M-</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a> t&amp;s        t&amp;d         D</span></code></pre></div>
+<p>の繰り返しになっている。</p>
+<p>総合としては、やはりこちらも明確な終止を回避している。……なんというか、全体的に褒める感じの口調で書いてきてアレなんだけど、このピアノきらきらのところは正直あんまりよくないと思う。ギターによる間奏のほうではまだ上行っていう楽曲全体に通底するテーマにそったフレーズがみられたけれど、こっちのきらきらには特にそういうものもない。端的に言って散漫であり、なんというか「次」までの時間を埋めるためのものであるかのように聞こえる。あるいは仮にこれ自体が狙いだとして、私はそこで狙われているものはあまりよい標的ではないと思う。まあライブでやるときなんかにはネタを挟めて楽しそうではあるが。</p>
+<p>なんにせよ、まとめておく。この部分の音楽的意義は、明確な終止を回避しつつ時間を経過させることにある。</p>
+<h4>Cメロ</h4>
+<p>Cメロについて。まず「明日明後日」から。分析としては、ここはベースに注目して <code>[5] -&gt; [7] -&gt; [8] -&gt; [10]</code> が拾えるので</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>[2+3]m- -&gt; [4+3]m- -&gt; [5+3]M+ -&gt; [7+3]M-</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  s         t&amp;d         S          D</span></code></pre></div>
+<p>となり、奇妙な響きもないのでこれでよい。</p>
+<p>総合としては、ここはBメロの対応部分を想起させておいたうえで <code>[8]</code> で止まらず <code>[10]</code> まで上行するという構造になっており、ここに盛り上がりが示唆されているのがおもしろいところだと思う。いつものところで考えが止まらない感じ、とでも言おうか。</p>
+<p>「その先だって」について。分析としては、またベースに注目して、 <code>[0] -&gt; [2] -&gt; [3]</code> が拾える。進行としてはひとまず正則和音で</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>[9+3]m- -&gt; [11+3]d- -&gt; [0+3]M+</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a> t&amp;s         d          T</span></code></pre></div>
+<p>となるのだが、ここで注目すべきは <code>[11+3]d-</code> である。ここは怪しい。そもそも一般に、正規和音における位置 <code>[11]</code> の和音があまり用いられないというのもあるし、なにより実際、「先だって」に合わせて <code>[11+3]d</code> を鳴らすと露骨に外れた響きが生じる。というわけで、ここではなんらかの別の和音が使用されていると分析するのが妥当であろう。</p>
+<p>特に標準調を逸脱した音は見受けられないので、ここでは正規和音の転回形へと分析することを考える。つまり位置 <code>[11]</code> の音を含むような転回形を探していく。これについては、正規和音の音が1つおきにとられることから、位置 <code>[4], [7]</code> の和音が候補になる<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>。</p>
+<p>というわけで、</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>[9+3]m- -&gt; ([4+3]m-)/[11+3] -&gt; [0+3]M+</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a> t&amp;s         t&amp;d                 T</span></code></pre></div>
+<p>および</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>[9+3]m- -&gt; ([7+3]M+)/[11+3] -&gt; [0+3]M+</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a> t&amp;s          D                  T</span></code></pre></div>
+<p>という2通りの分析可能性が得られることになる。これはまあ、どちらへと分析してもよいのではないかと思う。響きとしては、前者の <code>([4+3]m-)/[11+3]</code> はいくらかおしゃれに響いているように、また後者の <code>([7+3]M+)/[11+3]</code> はいくらかまっすぐに響いているように、それぞれ感じられる（前者が代理和音の転回形であるのに対し、後者が狭義属和音の転回形であることによると思う）。曲想としては、ここは歌詞の主体がいくらかコントロールを失うところ、おしゃれ感なんて演出してる場合じゃないよってところだと思うので、なんとなく後者へと分析したくなる。まあ好みだとは思う。</p>
+<p>総合としては、これはおもしろいところで、たぶん <code>[0] -&gt; [2] -&gt; [3]</code> よりも <code>[12] -&gt; [14] -&gt; [15]</code> と書いたほうが気分に近い。つまり直前の <code>[5] -&gt; [7] -&gt; [8] -&gt; [10]</code> という上行をそのまま引き継いで上行していくような構造になっている。こみあげてくる感じというか、おさえられなくなる感じというか、そういうものに通ずる進行だと思う。</p>
+<p>「追い続けた」について。分析としては、ベースに注目して <code>[5] -&gt; [7] -&gt; [8]</code> が拾える。Bメロでもみた進行で、素直な響きであり、</p>
+<div class="sourceCode" id="cb47"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>[2+3]m- -&gt; [4+3]m- -&gt; [5+3]M+</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>  s         t&amp;d        S</span></code></pre></div>
+<p>と分析してよい。</p>
+<p>総合としては、 <code>[3]</code>-標準調において <code>[3]</code> の上が <code>[5]</code> であるという点に注目したい。つまりここの <code>[5] -&gt; [7] -&gt; [8]</code> も、最初の「明日明後日」のときのラインをもう一度演奏しているというよりは、むしろ「その先だって」での上行の最後の音 <code>[3]</code> をそのまま引き継いで上行するようなものになっている。さらに言うと、最初の「明日明後日」とはちがって今度は上行が <code>[8]</code> で止まっているというのもおもしろいと思う。ようはピークがここにあるということだろう。最高点にはすでに到達していて、もう引き返せない、あいまいにしていたはずのことがあふれて止まらない、って感じ。言語化せずにあいまいにしてきたことをいよいよ受け入れます、みたいな場ができあがる。</p>
+<p>で、満を持して「君は僕の光だった」がくる。よいですね。分析としては、ベースに注目すると <code>[5] -&gt; [7] -&gt; [8] -&gt; [7]</code> になっており、ここも</p>
+<div class="sourceCode" id="cb48"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>[2+3]m- -&gt; [4+3]m- -&gt; [5+3]M+ -&gt; [4+3]m-</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>  s         t&amp;d         S         t&amp;d</span></code></pre></div>
+<p>でよい。特に奇妙な響きもない。</p>
+<p>総合としては、ここは進行としてはたしかにBメロ末尾と一緒なんだけど、Bメロのときとはちがい、 <code>[7]</code> のタイミングでボーカルは黙るというところがポイントだと思う。 <code>[5+3]M+ -&gt; [4+3]m-</code> は緊張が弱まる進行で（音を下げるってのはそういうことだ）、この弛緩はいわばなにかを認めてしまった後のあの感覚にうまく対応している、ってところまで読むのはちょっと読みすぎかもしれないが、まあでもそう読みたくなるような条件はそろっている。</p>
+<p>ついでに言うと、狙ってるのかは謎だけど（というかたぶん狙ってないんだけど）、「君は僕の光だった」がやや唐突ってところも美しいと思う。そのおかげで、段階を踏んでこういう結論になりました、って感じじゃなく、むしろ思いがけずあふれてきた言葉、ポロッと言っちゃった言葉、コントロールされていない言葉って感じが出ている。いや、もちろん、追い続けた先にある北極星みたいな光でした、って意味でいちおう繋がってはいるんだけど、「追い続けた」の後に2小節ほど時間間隔をとるメロディによってその「君」への修飾がいくらか弱いものになっていて、それによってやや唐突な印象が生まれているのが美しさに繋がっていると思う。</p>
+<p>まとめておく。この曲のCメロの音楽的意義は、上行につぐ上行の果て、一番高いところで「君は僕の光だった」を歌うことにある。この機能の実現にあたり、「その先だって」の進行がその前後の上行をなめらかにつないでいるところが構造的なおもしろさになっている。螺旋階段みたいになってる。</p>
+<h4>サビ（3）</h4>
+<p>1番と同じ。</p>
+<h4>アウトロ</h4>
+<p>イントロとだいたい同じ。分析してもいいが、もう自明だろう。</p>
+<h4>まとめ</h4>
+<p>リラックスしたよい曲でした。ところで、以上を踏まえたうえで、あらためて<a href="https://www.youtube.com/watch?v=s7m8rALmMJY">この楽曲が採用されているエンディング</a>を参照してみると、これはなかなか学ぶところが多い。特に、表情の移り変わり、画面の移り変わりを特定の進行と比べたりするのはほとんど啓発的とさえ言ってよい。あんまりやりすぎるのもよくないだろうが。</p>
+<p>たとえば、目をひく構造を持っていたあのBメロの末尾には次のような映像が与えられている<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>：</p>
+<figure>
+<img src="../media/5M-4m.gif" width="640" alt="よくわかる [5+3]M+ -&gt; [4+3]m- " />
+<figcaption aria-hidden="true">よくわかる <code>[5+3]M+ -&gt; [4+3]m-</code><br />
+</figcaption>
+</figure>
+<p>この表情のうつろいはホント絶妙だと思う。これが <code>[5+3]M+ -&gt; [7+3]M-</code> だったらこうはならない。よく見てほしい。これが <code>[7+3]M-</code> じゃなくて <code>[4+3]m-</code> の顔です。</p>
+<p>あるいは「美しかったか 愛せていたか」に見える王道進行には次のような映像が与えられている<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>：</p>
+<figure>
+<img src="../media/5M-7M-4m-9m.gif" width="640" alt="よくわかる [5+3]M+ -&gt; [7+3]M- -&gt; [4+3]m- -&gt; [9+3]m- " />
+<figcaption aria-hidden="true">よくわかる <code>[5+3]M+ -&gt; [7+3]M- -&gt; [4+3]m- -&gt; [9+3]m-</code><br />
+</figcaption>
+</figure>
+<p>これもまたすぐれた表現だと思う。「美しかったか？」→ （愛せていたか？）。前半2つでは外語に注目しておいて、後半2つでは内語に注目をうつす、みたいな。 <code>M</code> の和音から <code>m</code> の和音にうつる感じとの対応というか。</p>
+<p>こういうなんとなくの印象を積み重ねていって、特定の進行に自分なりのイメージをもつようにしておくと、自分で曲を書いたり、あるいは他人の曲を演奏したりするときにより多くのものが見えるようになる。その際、直前の「焦点ガ～」みたいな言語での記述ってやっぱり遅くて、不便で、上にあるような映像みたいなものを利用できるとたぶん強い。</p>
+<p>それにしても、こういう画面がエンディングの中に存在しているってのは救いのある話だと思う。つまり、これらの絵を描いた人がいちいちこの曲はどういう構造で、とかって考えていたかっていうと、まあたぶんそんなことはないわけです。もちろん「たぶん」だけど。だから、なんというか、曲を書いた人間の細かな工夫みたいなものが、それを受け取った人間になにかしらの形で伝わっていることの痕跡がここにはある。誰かにそう聞いてもらえたことのしるしがある。</p>
+<p>あと関係ないけど私はこのエンディングの「すぐに消えそうな一瞬はこんなにも」で毎回泣きそうになるよ。</p>
+<h3>相対性理論『ミス・パラレルワールド』</h3>
+<p><a href="https://www.youtube.com/watch?v=t2nTZrPQFFc">https://www.youtube.com/watch?v=t2nTZrPQFFc</a></p>
+<p>ちょっと複雑になった例として、相対性理論『ミス・パラレルワールド』を調べてみる。今回は、『youthful beautiful』のときのように進行の構成からやるのではなく、あらかじめ誰かが与えた進行を調べていく。また分析・総合も、先ほどよりもサクッとやっていく。</p>
+<h4>調の確定</h4>
+<p>とはいえ、まあ、調くらいは自分で確定させておきましょう。冒頭のキャッチーなギターの旋律は <code>{[0], [1], [3], [5], [8], [10]}</code> から構成されている。やくしまるえつこが歌う「秘密の組織がきて」は <code>{[1], [3], [5], [6], [8]}</code> から構成されている。つまり利用可能音として <code>{[0], [1], [3], [5], [6], [8], [10]}</code> がある。距離1の音のペアとして <code>[0], [1]</code> および <code>[5], [6]</code> があり、 <code>[1] + [5] = [6]</code> なのでこの曲は <code>[1]</code>-標準調から始まる。</p>
+<h4>イントロ</h4>
+<p>以下では <a href="https://ja.chordwiki.org/wiki/%E3%83%9F%E3%82%B9%E3%83%BB%E3%83%91%E3%83%A9%E3%83%AC%E3%83%AB%E3%83%AF%E3%83%BC%E3%83%AB%E3%83%89">こちらの</a> サイトの解釈を調べていく。同サイトの分析によれば、イントロの進行は</p>
+<div class="sourceCode" id="cb49"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>Gb -&gt; Fm -&gt; Bbm -&gt; Gb -&gt; Fm -&gt; Bbm</span></code></pre></div>
+<p>すなわち</p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>[5+1]M -&gt; [4+1]m -&gt; [9+1]m -&gt; [5+1]M -&gt; [4+1]m -&gt; [9+1]m</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  S        t&amp;d       t&amp;s        S        t&amp;d       t&amp;s</span></code></pre></div>
+<p>の2回の繰り返しであるという。</p>
+<p>総合について。ここは通常の終止 <code>s -&gt; d -&gt; t</code> の2 * 2 = 4回の繰り返しである。ちなみに、しばらく眺めると、この部分が王道進行</p>
+<div class="sourceCode" id="cb51"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>[5+1]M+ -&gt; [7+1]M- -&gt; [4+1]m- -&gt; [9+1]M-</span></code></pre></div>
+<p>における <code>[7+1]M-</code> の部分を省略して得られる進行になっていることがわかる。楽器を演奏するときはこっちで理解しておいたほうが記憶に負担がかからなくてよい、かもしれない。</p>
+<p>結局、同サイトの解釈によれば、イントロは王道進行の変種の繰り返しである。</p>
+<h4>Aメロ</h4>
+<p>同サイトの分析によれば、Aメロ、「ひみつの組織が来て」から始まる部分の進行は</p>
+<div class="sourceCode" id="cb52"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>Ebm -&gt; Fm -&gt; Gbm -&gt; Bbm7</span></code></pre></div>
+<p>すなわち</p>
+<div class="sourceCode" id="cb53"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>[2+1]m -&gt; [4+1]m -&gt; [5+1]m -&gt; [9+1]m</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  s        t&amp;d        ?        t&amp;s</span></code></pre></div>
+<p>となっている。ここでおもしろいのは <code>[5+1]m</code> であろう。これは通常であれば <code>[5+1]M</code> になるところで、つまりこの和音は正規和音ではない。</p>
+<p>ではこいつはいったい何物か？「調の外部への進行」の「別な標準調をとるもの」でつくった表を眺めてみると、 <code>[5]m-</code> を利用可能にするような転調が存在することがわかる。つまりこれは、慣例的に言うところのサブドミナント・マイナーであり、ここで一瞬だけ <code>[3]</code>-関係調の位置 <code>[2]</code> の和音を借りていることが分かる。つまりAメロの進行は正しくは</p>
+<div class="sourceCode" id="cb54"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>   key:[1]            key:[4]     key:[1]</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>----------------    ----------    ------</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>[2+1]m -&gt; [4+1]m -&gt; [(2+3)+1]m -&gt; [9+1]m</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>  s        t&amp;d         s           t&amp;s</span></code></pre></div>
+<p>となる。あるいは同じことだが、ある標準調からみたサブドミナント・マイナーを <code>Sm</code> と表記したうえで、あたかもその調における正規和音のようにみなして、</p>
+<div class="sourceCode" id="cb55"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>[2+1]m -&gt; [4+1]m -&gt; [5+1]m -&gt; [9+1]m</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>  s        t&amp;d       Sm        t&amp;s</span></code></pre></div>
+<p>と書いたほうがわかりやすいかもしれない。</p>
+<p>総合としては、ここは <code>(s -&gt; t) -&gt; (Sm -&gt; t)</code> のように終止 <code>S -&gt; T</code> を2回繰り返すものになっている。</p>
+<h4>Bメロ</h4>
+<p>続けてBメロ、「放課後 ふとよぎるテレパシー」から始まる部分の進行を調べる。同サイトの分析によれば、この部分は</p>
+<div class="sourceCode" id="cb56"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>A -&gt; B -&gt; G#m -&gt; C#m -&gt; A -&gt; B -&gt; G#m -&gt; D#m</span></code></pre></div>
+<p>であり、そしてここで <code>A</code> を <code>[8+1]</code> と書き直した時点で転調が起こっていることがわかる。 <code>[8]</code> は標準音階の位置ではないからである。</p>
+<p>ではどういった転調が起こっているのか？ これを調べるのは簡単で、 <code>A -&gt; B</code> つまり <code>[9] -&gt; [11]</code> の部分に注目すればよい。標準調において <code>M</code> の和音が2回連続で出現する箇所は <code>[5]M, [7]M</code> のところしかないから、これによって <code>[9]</code> が位置 <code>[5]</code> の和音であることがわかる。ゆえに目的の標準調を <code>r</code> とすれば <code>r + [5] = [9]</code> となり、したがってこれは <code>[4]</code>-標準調である。</p>
+<p>つまりこれは <code>[1]</code>-標準調から <code>[4]</code>-標準調への転調である。言い換えれば <code>[3]</code>-関係調への転調である。「別な標準調をとるもの」ですでに見たように、 <code>[±3]</code>-関係調への転調はしばしばおこなわれるのだった。この曲はその一例になっている。ついでに言えば、Aメロにあったサブドミナント・マイナーも <code>[3]</code>-関係調の和音であるから、この転調はすでにAメロの時点で暗示されていたとも言える。</p>
+<p>というわけでこの部分の進行を <code>[4]</code>-標準調のものとしてあらためて調べてみる。</p>
+<div class="sourceCode" id="cb57"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>A -&gt; B -&gt; G#m -&gt; C#m -&gt; A -&gt; B -&gt; G#m -&gt; D#m</span></code></pre></div>
+<p>を書き直すと、</p>
+<div class="sourceCode" id="cb58"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>[5+4] -&gt; [7+4]m -&gt; [4+4]m -&gt; [9+4] -&gt; [5+4] -&gt; [7+4] -&gt; [4+4]m -&gt; [11+4]m</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>  S        D        t&amp;d       t&amp;s       S        D       t&amp;d         ?</span></code></pre></div>
+<p>となる。最後の <code>[11+4]m</code> 以外の部分については特に問題ないはずで、機能としては素直に <code>(S -&gt; D -&gt; t -&gt; t) -&gt; (S -&gt; D -&gt; t)</code> である。なお前半の <code>S -&gt; D -&gt; t -&gt; t</code> は王道進行である。後半も途中までは王道進行である。</p>
+<p>問題は <code>[11+4]m</code> である。歌詞としては「東京都心は」のところで、雰囲気がはっと変わるところ。位置 <code>[11]</code> における正規和音はもちろん <code>[11]d-</code> であるから、 <code>[11+4]m</code> なんて和音は <code>[4]</code>-標準調には存在せず、それゆえここでも転調が起こっていることがわかる。</p>
+<p>どこに転調するのだろうか？普通に考えれば「もとの調」であろう。転調によってつくったBメロの特殊な雰囲気を、転調をやめることで打ち切る。 <code>[11+4]m = [15]m = [2+1]m</code> なので、こう理解すればBメロの進行は</p>
+<div class="sourceCode" id="cb59"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>                         key:[4]                                  key:[1]</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>--------------------------------------------------------------    ------</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>[5+4] -&gt; [7+4]m -&gt; [4+4]m -&gt; [9+4] -&gt; [5+4] -&gt; [7+4] -&gt; [4+4]m -&gt; [2+1]m</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>  S        D        t&amp;d       t&amp;s       S        D       t&amp;d        s</span></code></pre></div>
+<p>と分析できる。</p>
+<p>総合について。『ミス・パラレルワールド』のBメロのおもしろさは、転調の打ち切りを明示する和音 <code>[2+1]m</code> を、いわば「ほったらかし」にしているところにある。「転調をやめました！」とだけ明示して、やめたあとでどうなるかを一切語らないところにある。露骨にふわふわしたメロディから突然醒める感じ。</p>
+<h4>サビ</h4>
+<p>同サイトによると、サビの進行は</p>
+<div class="sourceCode" id="cb60"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>Cb -&gt; Dbsus4 -&gt; Ebm7 -&gt; Bbm</span></code></pre></div>
+<p>である。すなわちこれは本稿の記法でいうところの</p>
+<div class="sourceCode" id="cb61"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>[11]M -&gt; [1]S -&gt; [3]m- -&gt; [10]m</span></code></pre></div>
+<p>であるわけで、 <code>[11] = [10 + 1]</code> であり、かつ <code>[10]</code> は標準音階の位置ではないことから、これは <code>[1]</code>-標準調ではないことがわかる。つまりまた転調が起こっている。ではどこに転調しているのか。素直に <code>[4]</code>-標準調で調べてみると、</p>
+<div class="sourceCode" id="cb62"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>[7+4]M -&gt; [9+4]S -&gt; [11+4]m- -&gt; [6+4]m</span></code></pre></div>
+<p>となり、前2つは問題ないが、後ろ2つが調を外れる。後ろ2つをもとの <code>[1]</code>-標準調で分析すると、</p>
+<div class="sourceCode" id="cb63"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>    key:[4]              key:[1]</span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>---------------     -----------------</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>[7+4]M -&gt; [9+4]S -&gt; [2+1]m- -&gt; [9+1]m</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>  D        t&amp;s        s         t&amp;s</span></code></pre></div>
+<p>となって最後まで分析が通る。この曲でもそうだが、 <code>[±3]</code>-関係調への転調はわりと頻繁におこなわれるので、奇妙な和音をみつけたらまずこれらの関係調を調べてみるとよいと思う。</p>
+<p>総合としてはここは <code>D -&gt; t</code> および <code>s -&gt; t</code> という2つの偽終止の組み合わせになっている。異なる調でそれぞれ終止をおこなう、という具合。</p>
+<h4>まとめ</h4>
+<p>『ミス・パラレルワールド』では <code>[1]</code>-標準調と <code>[4]</code>-標準調とのあいだで相互にかなり頻繁に転調がおこなわれている。ついでに言うと、ある標準調からみた <code>[±3]</code>-関係調は、ふつうの音楽理論では "parallel key" とよばれている。すなわちこの曲は、サビで「パラレルパラレル」と歌いながら2小節ごとにパラレルな調へと転調しまくるものとなっている。このあたりまで構造が見えると、たとえば「それぞれの調がそれぞれの平行世界のつもりなのかも」のような踏み込んだ読みがいくらか穏当なものになってくる。</p>
+<h3>Radiohead『Pyramid Song』</h3>
+<p><a href="https://www.youtube.com/watch?v=3M_Gg1xAHE4"><a href="https://www.youtube.com/watch?v=3M_Gg1xAHE4">https://www.youtube.com/watch?v=3M_Gg1xAHE4</a></a></p>
+<p>だいぶ複雑になった例として、Radioheadの曲を調べてみる。もし聞いたことがないようであれば試しに聞いてみてほしい。初見だと「なに……この……なに？」となることうけあいである。拍子もわかりづらいが (いちおう (4 + 4 + 5 + 4 + 4)/16拍子とみなせばとりあえず追える)、響きも相当に特殊である。</p>
+<p>この曲の歌い出し、0:43~の「I jumped in the river and what did I see? / Black-eyed angels swam with me」について調べてみる。</p>
+<p>『ミス・パラレルワールド』のときと同様、検索して出てきた<a href="https://tabs.ultimate-guitar.com/tab/radiohead/pyramid-song-chords-401528">サイト</a>の進行を調べていく。曰く、同サイトによれば、この箇所は次のように進行しているという：</p>
+<div class="sourceCode" id="cb64"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>  F#                  Gmaj7        A6        Gmaj7   F#</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>I jumped in the river and what did I see?</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>F#m          Eadd9                Gmaj7</span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>Black-eyed angels swam with me</span></code></pre></div>
+<p>本稿の記法に落として進行を書くとこれは次のようになる：</p>
+<div class="sourceCode" id="cb65"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>[6]M -&gt; [7]M+ -&gt; [9]M -&gt; [7]M+ -&gt; [6]M -&gt; [6]m -&gt; [4]M -&gt; [7]M</span></code></pre></div>
+<p>ここで <code>A6</code> の <code>6</code>, および <code>Eadd9</code> の <code>add9</code> 部分は無視した（和音としての機能はたいして変わらないので）。</p>
+<p>さて調を確定したいのだが、まずもって冒頭3つの <code>[6]M -&gt; [7]M+ -&gt; [9]M</code> の時点でこれはもう完全に異常である。 <code>M</code> の和音が3連続しているわけであり、まあ、謎である。</p>
+<p>ここで参考になるのは <code>[7]M+</code> と <code>[6]M</code> の関係である。「別な標準調をとるもの」のところで書いた図を参考にすると、標準調において、 <code>M</code> の和音の1だけ上に <code>M+</code> な和音を配置できるような手法が存在することがわかる。つまり、ナポリの六度である。ナポリの六度は位置 <code>[1]</code> で <code>M+</code> の和音を利用する手法であった。というわけで、 <code>[7]M+</code> がこのナポリの六度であると仮定して分析を始めていく。</p>
+<p><code>[7]M+</code> がナポリの六度であるなら、この曲は <code>[6]</code>-標準調であるということになる。ここまでで、上記を</p>
+<div class="sourceCode" id="cb66"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>    key:[6]             ?           key:[6]           ?          ?       key:[6]</span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>-----------------    ------    -----------------    ------    -------    ------</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>[0+6]M -&gt; [1+6]M+ -&gt; [3+6]M -&gt; [1+6]M+ -&gt; [0+6]M -&gt; [0+6]m -&gt; [10+6]M -&gt; [1+6]M</span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a>            N                    N                                         N</span></code></pre></div>
+<p>まで分析することができる。ここで「 <code>N</code> 」はナポリの六度を明示するための記号である。</p>
+<p>次に <code>[3+6]M</code> に説明を与えたい。さきほどの図をみれば分かる通り、位置 <code>[3]</code> に典型的な和音は存在しない。</p>
+<p>では <code>[±3]</code>-関係調への転調を考えてみるとどうか。 <code>[6]</code>-標準調の <code>[±3]</code>-関係調は <code>[3]</code>-標準調、および <code>[9]</code>-標準調である。 <code>[3+6] = [9] = [6+3] = [0+9]</code> であるから、 <code>[9]M</code> を説明できるのは <code>[9]</code>-標準調のほうである。こちらで調べると、問題の進行は</p>
+<div class="sourceCode" id="cb67"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>    key:[6]          key:[9]           key:[6]           key:[9]        key:[6]</span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>-----------------    ------    -----------------    -----------------   ------</span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>[0+6]M -&gt; [1+6]M+ -&gt; [0+9]M -&gt; [1+6]M+ -&gt; [0+6]M -&gt; [9+9]m -&gt; [7+9]M -&gt; [1+6]M</span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a>            N                    N                                        N</span></code></pre></div>
+<p>ここまで分析することができる。</p>
+<p>一通り進行を分析することができたわけだが、ここには注目するべき構造がまだある。つまり、 <code>[0+6]M = [6]M</code> と <code>[9+9]m = [6]m</code> との関係である。</p>
+<p><code>[6]M = [9+9]M</code> なので、 <code>[9]</code>-標準調を基準にして考えれば、この進行における冒頭の <code>[0+6]M</code> は <code>[9+9]M</code> ということでもある。つまり冒頭の和音は、 <code>[9]</code>-標準調の位置 <code>[9]</code> における <code>M</code> の和音である。これはさきほどの図をみればわかるが、いわゆるピカルディの三度になっている：</p>
+<div class="sourceCode" id="cb68"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>    key:[6]          key:[9]           key:[6]           key:[9]        key:[6]</span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>-----------------    ------    -----------------    -----------------   ------</span>
+<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>[0+6]M -&gt; [1+6]M+ -&gt; [0+9]M -&gt; [1+6]M+ -&gt; [0+6]M -&gt; [9+9]m -&gt; [7+9]M -&gt; [1+6]M</span>
+<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a>  ↑         N                    N          ↑         |                   N</span>
+<span id="cb68-5"><a href="#cb68-5" aria-hidden="true" tabindex="-1"></a>  |                                         |         |</span>
+<span id="cb68-6"><a href="#cb68-6" aria-hidden="true" tabindex="-1"></a>   ---------------------------------------------------</span>
+<span id="cb68-7"><a href="#cb68-7" aria-hidden="true" tabindex="-1"></a>                        P</span></code></pre></div>
+<p>通常、ピカルディの三度は <code>[9]m</code> がくることを予想させたうえでそれを裏切って <code>[9]M</code> を利用する、という形で用いられる。わかりやすい例としてはショパンの夜想曲第15番がある：</p>
+<p><a href="https://www.youtube.com/watch?v=99QJM9Gunvg">https://www.youtube.com/watch?v=99QJM9Gunvg</a></p>
+<p>4:30から続けて3つの和音が演奏されるが、ここで3番目の和音にある明るさがピカルディの三度の色である。 <code>[9]m</code> がくるべき場所に <code>[9]M</code> を用いることである特有の雰囲気をもった明るさが実現されている。一条の光、みたいな。</p>
+<p>他方、『Pyramid Song』では逆に、 <code>[9]M</code> を先に提示したうえで <code>[9]m</code> が与えられている。すなわちここには「逆方向のピカルディの三度」とでも呼ぶべき構造があり、これによって特有の雰囲気をもった暗さが作り出されている。改めて "Black-eyed angels" の箇所にある特有の暗さを味わってみてもらえれば、なるほどなんとなくピカルディの逆っぽい、と看取できるのではないかと思う。暗く脱力するというか。</p>
+<p>簡単にまとめるなら、『Pyramid Song』の進行はナポリの六度を基準にしてゆるやかに振動している。そしてこの振動の上端と下端に近づくたびに <code>[3]</code>-関係調へと転調してそちらの和音をもとの標準調の和音であるかのように利用する、という構造になっている。さらにここにナポリの六度とか逆向きのピカルディとかの響きが絡み合って上にあるような独特の雰囲気が構成されている。</p>
+<h2>跋</h2>
+<p>まあ自由にやっていきましょう。</p>
+<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p>通常はこの和音による終止のことをピカルディの三度とよぶが、まあ和音に名前をあたえたほうがあつかいやすい。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2" role="doc-endnote"><p>ここでは3和音で考えている。和音の構成音は、あまり少なすぎても必要な転回形が見つからず、またあまり多すぎても和音の響きが濁ってしまうので（12和音とはすなわち鍵盤全部を同時に叩いて得られる音である）、3和音または4和音くらいで考えるのが穏当だと思う。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3" role="doc-endnote"><p>TRIGGER, 『<a href="https://gridman.net/">SSSS.GRIDMAN</a>』, 「GRIDMAN」製作委員会, 2018.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4" role="doc-endnote"><p>TRIGGER, 『<a href="https://gridman.net/">SSSS.GRIDMAN</a>』, 「GRIDMAN」製作委員会, 2018.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+        </main>
+        <footer>
+            <p>
+                <span class="metadata">
+                    <a href="https://twitter.com/ricotie">twitter</a>
+                    /
+                    <a href="https://github.com/vekatze">github</a>
+                    /
+                    <a href="https://github.com/vekatze">email</a>
+                </span>
+            </p>
+        </footer>
+        
+    </body>
+</html>
