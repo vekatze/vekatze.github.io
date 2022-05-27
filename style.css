@@ -101,7 +101,29 @@ mjx-container {
 
 #audio-player {
     border: 1px solid #ccc;
-   width: 100%;
+    width: 100%;
+    margin-top: 1em;
+}
+
+#cover-container {
+    position: relative;
+}
+
+#cover-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.25);
+}
+
+#play-button {
+    width: 100px;
+    cursor: pointer;
 }
 
 a.plyr__control {

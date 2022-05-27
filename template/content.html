@@ -5,11 +5,16 @@
     $endif$
 </header>
 $if(audio)$
-<p id="audio-player">
+<div id="audio-player">
     $if(cover)$
-    <img id="cover" class="cover" src="$cover$"/>
+      <div id="cover-container">
+          <img id="cover" class="cover" src="$cover$"/>
+          <div id="cover-overlay">
+              <img id="play-button" src="/media/play-button-blue.png" />
+          </div>
+      </div>
     $endif$
     <audio id="audio-player-internal" preload="auto" src="$audio$" />
-</p>
+</div>
 $endif$
 $body$
