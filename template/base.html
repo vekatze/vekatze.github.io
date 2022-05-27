@@ -8,7 +8,11 @@
         <meta property="og:url" content="$root$$url$" />
         <meta property="og:title" content="$title$ - $site-title$" />
         <meta property="og:type" content=$if(published)$"article"$else$"website"$endif$ />
+        $if(audio)$
+        <meta property="og:image" content="$root$/media/vekatze-play.jpg" />
+        $else$
         <meta property="og:image" content="$root$/media/vekatze.jpg" />
+        $endif$
         $if(summary)$
         <meta property="og:description" content="$summary$" />
         $endif$
@@ -34,7 +38,7 @@
                     /
                     <a href="https://github.com/vekatze">github</a>
                     /
-                    <a href="https://github.com/vekatze">email</a>
+                    <a href="mailto:vekatze@icloud.com">email</a>
                 </span>
             </p>
         </footer>
