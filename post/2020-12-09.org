@@ -1,4 +1,5 @@
 ---
+title: 被造物の星の時間
 audio: 被造物の星の時間.flac
 cover: atri-stellar.jpg
 ---

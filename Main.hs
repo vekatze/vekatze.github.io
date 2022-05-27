@@ -2,12 +2,7 @@ import Control.Applicative (Alternative (empty))
 import Data.Aeson
 import Data.Aeson.Key (fromString)
 import qualified Data.Aeson.KeyMap as KM
-import Data.Char (isSpace)
-import Data.List (sortBy)
-import Data.Ord (comparing)
-import Data.Time (UTCTime, defaultTimeLocale, formatTime, parseTimeM)
-import Hakyll hiding (Template, chronological, recentFirst)
-import System.FilePath (takeBaseName)
+import Hakyll
 import Text.Pandoc hiding (getCurrentTimeZone)
 import Prelude
 
@@ -78,29 +73,14 @@ siteContext =
       audioContext,
       coverContext,
       metadataField,
-      baseContext,
+      dateField "published" "%Y-%m-%d",
       bodyField "body",
-      urlField "url",
-      pathField "path"
+      urlField "url"
     ]
 
 siteTitle :: String
 siteTitle =
   "以析比域"
-
-baseContext :: Context String
-baseContext = do
-  Context $ \k _ i -> do
-    (time, title) <- getItemMetadata $ itemIdentifier i
-    case k of
-      "published" ->
-        return $ StringField $ formatTime defaultTimeLocale "%Y-%m-%d" time
-      "updated" ->
-        return $ StringField $ formatTime defaultTimeLocale "%Y-%m-%d" time
-      "title" ->
-        return $ StringField title
-      _ ->
-        noResult $ "invalid key: " <> k
 
 fieldContext :: FromJSON a => String -> (a -> Compiler String) -> Context String
 fieldContext fieldName valueModifier =
@@ -157,29 +137,3 @@ writerOptions =
       writerTemplate = Nothing,
       writerExtensions = extensions
     }
-
-getItemMetadata ::
-  (MonadMetadata m, MonadFail m) =>
-  Identifier ->
-  m (UTCTime, String)
-getItemMetadata i = do
-  let basename = takeBaseName $ toFilePath i
-  let (dateString, titleString) = drop 1 <$> break isSpace basename
-  case parseTimeM True defaultTimeLocale "%Y-%m-%d" dateString of
-    Just value ->
-      return (value, titleString)
-    _ ->
-      fail $ "invalid basename: " <> basename
-
-chronological :: (MonadMetadata m, MonadFail m) => [Item a] -> m [Item a]
-chronological =
-  sortByM $ fmap fst . getItemMetadata . itemIdentifier
-  where
-    sortByM :: (Monad m, Ord k) => (a -> m k) -> [a] -> m [a]
-    sortByM f xs =
-      map fst . sortBy (comparing snd)
-        <$> mapM (\x -> fmap (x,) (f x)) xs
-
-recentFirst :: (MonadMetadata m, MonadFail m) => [Item a] -> m [Item a]
-recentFirst =
-  fmap reverse . chronological

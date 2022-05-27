@@ -1,6 +1,5 @@
 ---
 title: 型を実行する
-published: 2020-10-03
 updated: 2020-10-15
 mathjax: on
 ---
