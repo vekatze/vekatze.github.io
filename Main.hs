@@ -42,6 +42,9 @@ main = do
       compile copyFileCompiler
     match "template/*" $
       compile templateBodyCompiler
+    create [".nojekyll"] $ do
+      route idRoute
+      compile $ makeItem ("" :: String)
     create ["atom.xml"] $ do
       route idRoute
       compile $ do
@@ -69,6 +72,7 @@ siteContext :: Context String
 siteContext =
   mconcat
     [ constField "site-title" siteTitle,
+      constField "root" root,
       mathContext,
       audioContext,
       coverContext,
@@ -81,6 +85,10 @@ siteContext =
 siteTitle :: String
 siteTitle =
   "以析比域"
+
+root :: String
+root =
+  "https://vekatze.github.io"
 
 fieldContext :: FromJSON a => String -> (a -> Compiler String) -> Context String
 fieldContext fieldName valueModifier =

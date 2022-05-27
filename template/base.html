@@ -4,12 +4,18 @@
         <title>$title$ - $site-title$</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta property="og:url" content="$root$$url$" />
+        <meta property="og:title" content="$title$ - $site-title$" />
+        <meta property="og:type" content=$if(published)$"article"$else$"website"$endif$ />
+        <meta property="og:image" content="$root$/media/vekatze.jpg" />
         <link rel="stylesheet" href="/style.css" />
+        $if(audio)$
+        <script src="/asset/plyr.js"></script>
+        <link rel="stylesheet" href="/asset/plyr.css" />
+        $endif$
         $if(mathjax)$
         <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
         $endif$
-        <script src="/asset/plyr.js"></script>
-        <link rel="stylesheet" href="/asset/plyr.css" />
     </head>
     <body>
         <header>

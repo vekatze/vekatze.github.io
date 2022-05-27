@@ -1,5 +1,8 @@
 ---
 title: ゼロのある音楽理論
+og:url: aoeu
+og:title: なんかのタイトル
+og:description: lorem ipsum
 ---
 
 #+OPTIONS: H:6
