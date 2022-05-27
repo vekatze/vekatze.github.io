@@ -2,7 +2,7 @@
 title: 被造物の星の時間
 audio: 被造物の星の時間.flac
 cover: atri-stellar.jpg
-description: 沈みゆく世界で、君を見つけた。
+summary: Stellar Moments of Humanoidity
 ---
 
 #+begin_quote

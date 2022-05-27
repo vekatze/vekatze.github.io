@@ -9,8 +9,8 @@
         <meta property="og:title" content="$title$ - $site-title$" />
         <meta property="og:type" content=$if(published)$"article"$else$"website"$endif$ />
         <meta property="og:image" content="$root$/media/vekatze.jpg" />
-        $if(description)$
-        <meta property="og:description" content=$description$ />
+        $if(summary)$
+        <meta property="og:description" content="$summary$" />
         $endif$
         $if(audio)$
         <script src="/asset/plyr.js"></script>
