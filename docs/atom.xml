@@ -27,7 +27,7 @@
       <div id="cover-container">
           <img id="cover" class="cover" src="/media/atri-stellar.jpg"/>
           <div id="cover-overlay">
-              <img id="play-button" src="/media/play-button-blue.png" />
+              <img id="play-button" src="/media/play-button-triangle.png" />
           </div>
       </div>
     
