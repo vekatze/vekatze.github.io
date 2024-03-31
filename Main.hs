@@ -37,9 +37,6 @@ main = do
     match "style.css" $ do
       route idRoute
       compile compressCssCompiler
-    match (fromList ["favicon.ico"]) $ do
-      route idRoute
-      compile copyFileCompiler
     match "template/*" $
       compile templateBodyCompiler
     create [".nojekyll"] $ do
@@ -90,14 +87,14 @@ root :: String
 root =
   "https://vekatze.github.io"
 
-fieldContext :: FromJSON a => String -> (a -> Compiler String) -> Context String
+fieldContext :: (FromJSON a) => String -> (a -> Compiler String) -> Context String
 fieldContext fieldName valueModifier =
   field fieldName $ \item -> do
     metadata <- getMetadata $ itemIdentifier item
     case KM.lookup (fromString fieldName) metadata of
       Just rawValue
         | Success value <- fromJSON rawValue -> do
-          valueModifier value
+            valueModifier value
       _ ->
         noResult fieldName
 
