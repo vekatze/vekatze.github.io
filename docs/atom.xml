@@ -6,7 +6,9 @@
     <id>https://vekatze.github.io/atom.xml</id>
     <author>
         <name>vekatze</name>
+        
         <email>vekatze@icloud.com</email>
+        
     </author>
     <updated>2020-12-09T00:00:00Z</updated>
     <entry>
@@ -452,16 +454,16 @@
 <h4>まとめ</h4>
 <p>リラックスしたよい曲でした。ところで、以上を踏まえたうえで、あらためて<a href="https://www.youtube.com/watch?v=s7m8rALmMJY">この楽曲が採用されているエンディング</a>を参照してみると、これはなかなか学ぶところが多い。特に、表情の移り変わり、画面の移り変わりを特定の進行と比べたりするのはほとんど啓発的とさえ言ってよい。あんまりやりすぎるのもよくないだろうが。</p>
 <p>たとえば、目をひく構造を持っていたあのBメロの末尾には次のような映像が与えられている<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>：</p>
-<figure>
-<img src="../media/5M-4m.gif" width="640" alt="よくわかる [5+3]M+ -&gt; [4+3]m- " />
-<figcaption aria-hidden="true">よくわかる <code>[5+3]M+ -&gt; [4+3]m-</code><br />
+<figure width="640px">
+<img src="../media/5M-4m.gif" />
+<figcaption>よくわかる <code>[5+3]M+ -&gt; [4+3]m-</code><br />
 </figcaption>
 </figure>
 <p>この表情のうつろいはホント絶妙だと思う。これが <code>[5+3]M+ -&gt; [7+3]M-</code> だったらこうはならない。よく見てほしい。これが <code>[7+3]M-</code> じゃなくて <code>[4+3]m-</code> の顔です。</p>
 <p>あるいは「美しかったか 愛せていたか」に見える王道進行には次のような映像が与えられている<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>：</p>
-<figure>
-<img src="../media/5M-7M-4m-9m.gif" width="640" alt="よくわかる [5+3]M+ -&gt; [7+3]M- -&gt; [4+3]m- -&gt; [9+3]m- " />
-<figcaption aria-hidden="true">よくわかる <code>[5+3]M+ -&gt; [7+3]M- -&gt; [4+3]m- -&gt; [9+3]m-</code><br />
+<figure width="640px">
+<img src="../media/5M-7M-4m-9m.gif" />
+<figcaption>よくわかる <code>[5+3]M+ -&gt; [7+3]M- -&gt; [4+3]m- -&gt; [9+3]m-</code><br />
 </figcaption>
 </figure>
 <p>これもまたすぐれた表現だと思う。「美しかったか？」→ （愛せていたか？）。前半2つでは外語に注目しておいて、後半2つでは内語に注目をうつす、みたいな。 <code>M</code> の和音から <code>m</code> の和音にうつる感じとの対応というか。</p>
@@ -538,7 +540,7 @@
 <h4>まとめ</h4>
 <p>『ミス・パラレルワールド』では <code>[1]</code>-標準調と <code>[4]</code>-標準調とのあいだで相互にかなり頻繁に転調がおこなわれている。ついでに言うと、ある標準調からみた <code>[±3]</code>-関係調は、ふつうの音楽理論では "parallel key" とよばれている。すなわちこの曲は、サビで「パラレルパラレル」と歌いながら2小節ごとにパラレルな調へと転調しまくるものとなっている。このあたりまで構造が見えると、たとえば「それぞれの調がそれぞれの平行世界のつもりなのかも」のような踏み込んだ読みがいくらか穏当なものになってくる。</p>
 <h3>Radiohead『Pyramid Song』</h3>
-<p><a href="https://www.youtube.com/watch?v=3M_Gg1xAHE4"><a href="https://www.youtube.com/watch?v=3M_Gg1xAHE4">https://www.youtube.com/watch?v=3M_Gg1xAHE4</a></a></p>
+<p><a href="https://www.youtube.com/watch?v=3M_Gg1xAHE4"><span>https://www.youtube.com/watch?v=3M_Gg1xAHE4</span></a></p>
 <p>だいぶ複雑になった例として、Radioheadの曲を調べてみる。もし聞いたことがないようであれば試しに聞いてみてほしい。初見だと「なに……この……なに？」となることうけあいである。拍子もわかりづらいが (いちおう (4 + 4 + 5 + 4 + 4)/16拍子とみなせばとりあえず追える)、響きも相当に特殊である。</p>
 <p>この曲の歌い出し、0:43~の「I jumped in the river and what did I see? / Black-eyed angels swam with me」について調べてみる。</p>
 <p>『ミス・パラレルワールド』のときと同様、検索して出てきた<a href="https://tabs.ultimate-guitar.com/tab/radiohead/pyramid-song-chords-401528">サイト</a>の進行を調べていく。曰く、同サイトによれば、この箇所は次のように進行しているという：</p>
@@ -581,13 +583,13 @@
 <p>簡単にまとめるなら、『Pyramid Song』の進行はナポリの六度を基準にしてゆるやかに振動している。そしてこの振動の上端と下端に近づくたびに <code>[3]</code>-関係調へと転調してそちらの和音をもとの標準調の和音であるかのように利用する、という構造になっている。さらにここにナポリの六度とか逆向きのピカルディとかの響きが絡み合って上にあるような独特の雰囲気が構成されている。</p>
 <h2>跋</h2>
 <p>まあ自由にやっていきましょう。</p>
-<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1" role="doc-endnote"><p>通常はこの和音による終止のことをピカルディの三度とよぶが、まあ和音に名前をあたえたほうがあつかいやすい。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2" role="doc-endnote"><p>ここでは3和音で考えている。和音の構成音は、あまり少なすぎても必要な転回形が見つからず、またあまり多すぎても和音の響きが濁ってしまうので（12和音とはすなわち鍵盤全部を同時に叩いて得られる音である）、3和音または4和音くらいで考えるのが穏当だと思う。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3" role="doc-endnote"><p>TRIGGER, 『<a href="https://gridman.net/">SSSS.GRIDMAN</a>』, 「GRIDMAN」製作委員会, 2018.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4" role="doc-endnote"><p>TRIGGER, 『<a href="https://gridman.net/">SSSS.GRIDMAN</a>』, 「GRIDMAN」製作委員会, 2018.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>通常はこの和音による終止のことをピカルディの三度とよぶが、まあ和音に名前をあたえたほうがあつかいやすい。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>ここでは3和音で考えている。和音の構成音は、あまり少なすぎても必要な転回形が見つからず、またあまり多すぎても和音の響きが濁ってしまうので（12和音とはすなわち鍵盤全部を同時に叩いて得られる音である）、3和音または4和音くらいで考えるのが穏当だと思う。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>TRIGGER, 『<a href="https://gridman.net/">SSSS.GRIDMAN</a>』, 「GRIDMAN」製作委員会, 2018.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>TRIGGER, 『<a href="https://gridman.net/">SSSS.GRIDMAN</a>』, 「GRIDMAN」製作委員会, 2018.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section>
 ]]></summary>
@@ -1776,14 +1778,14 @@
 <p>Anyway, the point here is that the compiler polarizes an input by a user. From this perspective, a program doesn't have polarity at first, and it is neutral in that sense. What a user writes is a neutral proof term. So, just like we write text in a text file and set its extension to be ".txt", I chose to set the extension of a file that write a neutral term ".neut", and also went with using it as the name of the language. That's the whole story.</p>
 <h2>Afterword</h2>
 <p>GG.</p>
-<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1" role="doc-endnote"><p>When trying to recover the expressivity of intuitionistic logic starting from linear logic, the first approach that one comes up with would be to use the famous exponential modality <code>!</code>. This approach, however, doesn't seem to work well. Consider adding the modality to the system, and admitting the weakening/contraction operation for the propositions with the modality (that is, the propositions of the form <code>!A</code>). In this situation, the modified system essentially contains the intuitionistic logic as a fragment — a fragment in which all the propositions are of the form <code>!A</code>. This makes us go back to the starting point: "How can we manage memory in a system based on the intuitionistic logic?"<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2" role="doc-endnote"><p>A question can be posed here: What will happen when a type contains free variables? The short answer is that this sort of situation is handled by the generalized concept of a free variable. That is, the concept is generalized so that free variables in a type of a term are also regarded as free variables of the term. For example, consider the following term:</p>
+<li id="fn1"><p>When trying to recover the expressivity of intuitionistic logic starting from linear logic, the first approach that one comes up with would be to use the famous exponential modality <code>!</code>. This approach, however, doesn't seem to work well. Consider adding the modality to the system, and admitting the weakening/contraction operation for the propositions with the modality (that is, the propositions of the form <code>!A</code>). In this situation, the modified system essentially contains the intuitionistic logic as a fragment — a fragment in which all the propositions are of the form <code>!A</code>. This makes us go back to the starting point: "How can we manage memory in a system based on the intuitionistic logic?"<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>A question can be posed here: What will happen when a type contains free variables? The short answer is that this sort of situation is handled by the generalized concept of a free variable. That is, the concept is generalized so that free variables in a type of a term are also regarded as free variables of the term. For example, consider the following term:</p>
 <div class="sourceCode" id="cb27"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>λ (A : Type). λ (x : A -&gt; int). (x, 100)</span></code></pre></div>
 <p>Normally, the free variable of <code>(x, 100)</code> is considered to be simply <code>x</code>. With our generalization, however, since the type of <code>x</code> (i.e. <code>A -&gt; int</code>) contains <code>A</code> as its free variable, this <code>A</code> is also counted as a free variable. Also, since the type of <code>A</code> (i.e. <code>Type</code>) doesn't contain any free variables, this "tracing" operation ends here, with the result that the free variables of <code>(x, 100)</code> is <code>A, x</code>. In this way, we construct a "closed chain" of all the free variables of a term. We then put it at the first element of a generalized closure so that we can copy the closure later.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3" role="doc-endnote"><p>This extension of closure conversion is essentially just an existential quantification. Our familiar existential quantification starts from a statement with free variable(s) like <code>x + 1 = 0</code>, and then create a proposition like <code>exists (x : int). x + 1 = 0</code>, anonymizing the variable <code>x</code>. What the generalized closure conversion does is essentially the same; The type of the closure</p>
+<li id="fn3"><p>This extension of closure conversion is essentially just an existential quantification. Our familiar existential quantification starts from a statement with free variable(s) like <code>x + 1 = 0</code>, and then create a proposition like <code>exists (x : int). x + 1 = 0</code>, anonymizing the variable <code>x</code>. What the generalized closure conversion does is essentially the same; The type of the closure</p>
 <div class="sourceCode" id="cb28"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>({the set of free variables},</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a> λ (the original arguments, env).</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>   let (the free variables) := env in</span>
@@ -1794,9 +1796,9 @@
 <div class="sourceCode" id="cb30"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>Sigma (A : Type). A * {the type of the closed function}</span></code></pre></div>
 <p>The point here is that the <code>A1 * ... * An</code> is lowered to the term from the type.</p>
 <p>Incidentally, this 3-element representation of a closure is not new. Indeed, I was told in <a href="https://github.com/u2zv1wx/neut/issues/1">a GitHub issue</a> that there exists <a href="https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf">a work</a> that does a similar (the same?) thing. Also, with a quick search, I found <a href="https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf">a work in 1996 that does a similar thing</a>. Thus I emphasize here that I don't claim any originality on this generalization of closure conversion.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4" role="doc-endnote"><p>The actual compiler also uses GC so that it can make its output as efficient as possible. I think this can be understood as an optimization, though.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5" role="doc-endnote"><p>The content here is mainly based on <a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">this paper</a>, except for the last sketchy part.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6" role="doc-endnote"><p>More precisely, the operation of proving the conclusion of an elimination rule using the premises of the introduction rule and the additional premises of the elimination rule. Let's take the elimination rule of "<span class="math inline">\( \to \)</span>" for example:</p>
+<li id="fn4"><p>The actual compiler also uses GC so that it can make its output as efficient as possible. I think this can be understood as an optimization, though.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>The content here is mainly based on <a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">this paper</a>, except for the last sketchy part.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>More precisely, the operation of proving the conclusion of an elimination rule using the premises of the introduction rule and the additional premises of the elimination rule. Let's take the elimination rule of "<span class="math inline">\( \to \)</span>" for example:</p>
 <p><span class="math display">\[
 \begin{prooftree}
   \AxiomC{\( \Gamma \vdash A \to B \)}
@@ -1806,8 +1808,8 @@
 \end{prooftree}
 \]</span></p>
 <p>The elimination rule has <span class="math inline">\( A \to B \)</span> and <span class="math inline">\( A \)</span> as its premises. "The additional premises of the elimination rule" is the <span class="math inline">\( A \)</span> here. The example of "<span class="math inline">\( \land \)</span>" is a case in which we have 0 additional premises.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7" role="doc-endnote"><p>I found an answer on Stack Exchange saying that <a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">they correspond to the triangle identities of an adjunction</a>.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8" role="doc-endnote"><p>What will happen when a type contains side effects? There can be at least two responses to this situation:</p>
+<li id="fn7"><p>I found an answer on Stack Exchange saying that <a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">they correspond to the triangle identities of an adjunction</a>.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>What will happen when a type contains side effects? There can be at least two responses to this situation:</p>
 <ol>
 <li>To reject such a term at the type checking stage by making the language pure<br />
 </li>
@@ -3033,15 +3035,15 @@
 <p>なんにせよ、ポイントは、コンパイルの過程においてユーザの入力がpositiveな断片とnegativeな断片とに極化されるというところである。逆に言えば、ユーザが書いたプログラムにはまだ極性が入っておらず、そのかぎりにおいてneutralである。ユーザがソースコードに書くのはneutralな証明項である。というわけで、ちょうどテキストファイルに書かれるのがテキストで、その拡張子が ".txt" となるように、neutral termを書くファイルの拡張子は ".neut" とすることにし、これをそのまま言語の名前として用いることにしてみた。それだけの話でした。</p>
 <h2>跋</h2>
 <p>対ありでした〜</p>
-<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1" role="doc-endnote"><p>もしかすると、この制限はなんだか突然どこからともなく降ってきた恣意的なものに見えるかもしれない。が、これは実際には直観主義論理を考えるかわりに線形論理で考えてみるという「よくある」分析に沿ったものとなっている。こういう分析について書いてある文献としては照井先生の<a href="http://www.kurims.kyoto-u.ac.jp/~terui/birth.pdf">これ</a>が個人的におすすめ。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2" role="doc-endnote"><p>ややテクニカルな注釈を添えておく。線形論理からスタートして直観主義論理の表現能力を得ようと思ったなら、まず考えつくのはexponentialの様相を使うことだろうが、こちらの方針ではうまくメモリを静的に管理することができない（と思う）。というのは、S4の様相と同様の仕方でこのexponentialの様相を入れ、さらにその様相をもつもの（つまり <code>!A</code> という形の型を持つもの）に対してweakening / contractionを認めたとき、当該の論理体系はけっきょく <code>!A</code> という形の型だけが出現するようなフラグメントとして実質的に直観主義論理をそのまま含むことになってしまうからである。最初の「直観主義論理ベースな計算体系のメモリってどうやって管理するの？」の問題に戻ってきてしまう。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3" role="doc-endnote"><p>あるいは、ここで次のような疑問を抱くかもしれない。つまり、型のなかに自由変数が含まれていたらどうするのか、という疑問である。結論から言うと、こうした状況には自由変数の概念を拡張することによって対応する。つまり、自由変数の型の中に含まれる自由変数もまた、もとのtermの自由変数として数え入れるのである。たとえば、</p>
+<li id="fn1"><p>もしかすると、この制限はなんだか突然どこからともなく降ってきた恣意的なものに見えるかもしれない。が、これは実際には直観主義論理を考えるかわりに線形論理で考えてみるという「よくある」分析に沿ったものとなっている。こういう分析について書いてある文献としては照井先生の<a href="http://www.kurims.kyoto-u.ac.jp/~terui/birth.pdf">これ</a>が個人的におすすめ。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>ややテクニカルな注釈を添えておく。線形論理からスタートして直観主義論理の表現能力を得ようと思ったなら、まず考えつくのはexponentialの様相を使うことだろうが、こちらの方針ではうまくメモリを静的に管理することができない（と思う）。というのは、S4の様相と同様の仕方でこのexponentialの様相を入れ、さらにその様相をもつもの（つまり <code>!A</code> という形の型を持つもの）に対してweakening / contractionを認めたとき、当該の論理体系はけっきょく <code>!A</code> という形の型だけが出現するようなフラグメントとして実質的に直観主義論理をそのまま含むことになってしまうからである。最初の「直観主義論理ベースな計算体系のメモリってどうやって管理するの？」の問題に戻ってきてしまう。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>あるいは、ここで次のような疑問を抱くかもしれない。つまり、型のなかに自由変数が含まれていたらどうするのか、という疑問である。結論から言うと、こうした状況には自由変数の概念を拡張することによって対応する。つまり、自由変数の型の中に含まれる自由変数もまた、もとのtermの自由変数として数え入れるのである。たとえば、</p>
 <div class="sourceCode" id="cb27"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>λ (A : Type). λ (x : A -&gt; int). (x, 100)</span></code></pre></div>
 <p>のようなtermがあったとする。このとき、 <code>(x, 100)</code> の自由変数は、普通はたんに <code>x</code> だけであるとされる。が、ここでは、 <code>x</code> の型であるところの <code>A -&gt; int</code> が自由変数として <code>A</code> を含んでいるので、この <code>A</code> もまた自由変数として数え入れられることになる。他方、 <code>A</code> の型であるところの <code>Type</code> には自由変数は含まれないので、けっきょく、 <code>(x, 100)</code> の自由変数は <code>A, x</code> である、となる。このようにすることで、自由変数をコピーするための型の情報がすべてクロージャの第1成分に入ってくることになる。これによってクロージャがうまくコピーできるようになる。<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4" role="doc-endnote"><p>クロージャ変換のこの3要素への拡張は本質的にはただの存在量化である。親しみ深い存在量化は、 <code>x + 1 = 0</code> のような自由変数をもった主張から始めて、ここから <code>exists (x : Integer). x + 1 = 0</code> のような命題をつくり、いわば変数 <code>x</code> の部分を匿名化するものであった。上でやっているのも同じことで、つまり、もともとクロージャ</p>
+<li id="fn4"><p>クロージャ変換のこの3要素への拡張は本質的にはただの存在量化である。親しみ深い存在量化は、 <code>x + 1 = 0</code> のような自由変数をもった主張から始めて、ここから <code>exists (x : Integer). x + 1 = 0</code> のような命題をつくり、いわば変数 <code>x</code> の部分を匿名化するものであった。上でやっているのも同じことで、つまり、もともとクロージャ</p>
 <div class="sourceCode" id="cb28"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>({自由変数のあつまり},</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a> λ (もとの引数, env).</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>   let (自由変数だったものたちの名前) := env in</span>
@@ -3052,9 +3054,9 @@
 <div class="sourceCode" id="cb30"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>Sigma (A : Type). A * {...}</span></code></pre></div>
 <p>としているのがここでの変換である。この変換によって、もともと型のほうに入っていた <code>(A1, ..., An)</code> の情報がクロージャの第1成分というterm側に降りてきているところがポイントである。</p>
 <p>ところで、このような、クロージャを3成分に拡張する手法は特に新しいものではないらしい。実際、これが本題というわけではないが、<a href="https://github.com/u2zv1wx/neut/issues/1">githubリポジトリのissue</a>で<a href="https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf">紹介された論文</a>でも同じようなことをやっているとのことであり（まだ読んでいないが）、また簡単に調べてみただけでも、<a href="https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf">1996年時点ですでに似た話がある</a>ように見える。というわけで、いろいろ困ったことになるのは避けたいので、クロージャのこの3要素による変換について、本稿は特にこれといってオリジナリティを主張しない。<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5" role="doc-endnote"><p>当該のコンパイラにおいては、実際には既存コードをなるべく効率的にコンパイルするべくGCが同時に利用されていたりする。が、これはあくまでひとつの最適化であると理解しておけばよかろう。<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6" role="doc-endnote"><p>ここでの話は、最後の与太話を除いて<a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">こちらの論文</a>をベースにしたものになっている。<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7" role="doc-endnote"><p>もうすこし正確には、除去則の結論を、導入則の前提、および除去則の追加の仮定から証明するという操作である。つまり、たとえば <span class="math inline">\( \to \)</span> の除去則では</p>
+<li id="fn5"><p>当該のコンパイラにおいては、実際には既存コードをなるべく効率的にコンパイルするべくGCが同時に利用されていたりする。が、これはあくまでひとつの最適化であると理解しておけばよかろう。<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>ここでの話は、最後の与太話を除いて<a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">こちらの論文</a>をベースにしたものになっている。<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>もうすこし正確には、除去則の結論を、導入則の前提、および除去則の追加の仮定から証明するという操作である。つまり、たとえば <span class="math inline">\( \to \)</span> の除去則では</p>
 <p><span class="math display">\[
 \begin{prooftree}
   \AxiomC{\( \Gamma \vdash A \to B \)}
@@ -3064,8 +3066,8 @@
 \end{prooftree}
 \]</span></p>
 <p>のように <span class="math inline">\( A \to B \)</span> と <span class="math inline">\( A \)</span> が前提としてとられるが、これでいうところの <span class="math inline">\( A \)</span> が「除去則の追加の仮定」である。「<span class="math inline">\( \land \)</span>」の例ではここが0個になっている。<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8" role="doc-endnote"><p>もっと言うと、<a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">両者は随伴におけるtriangle identitiesのそれぞれに対応している</a>ようである。<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn9" role="doc-endnote"><p>そういえば、型に副作用があったらどうするのか、という疑問がありうる。これについては選択肢は少なくとも2つある：</p>
+<li id="fn8"><p>もっと言うと、<a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">両者は随伴におけるtriangle identitiesのそれぞれに対応している</a>ようである。<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p>そういえば、型に副作用があったらどうするのか、という疑問がありうる。これについては選択肢は少なくとも2つある：</p>
 <ol>
 <li>言語を純粋にしてそもそも副作用が絡んでいるときには型検査を通過しないようにする<br />
 </li>
@@ -3091,9 +3093,9 @@
 </header>
 
 <p>けっこうよくなってきたように思う（次の画像の表情で）。</p>
-<figure>
-<img src="../media/atri-confidence.png" width="400" alt="自信ありげな表情の一例 " />
-<figcaption aria-hidden="true">自信ありげな表情の一例<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a><br />
+<figure width="400px">
+<img src="../media/atri-confidence.png" />
+<figcaption>自信ありげな表情の一例<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a><br />
 </figcaption>
 </figure>
 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi vitae eros sollicitudin, tempus tortor nec, vehicula felis. Etiam et elementum nibh. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. In hac habitasse platea dictumst. Fusce luctus lectus ut viverra ultrices. Cras sed orci dignissim, vestibulum est efficitur, iaculis quam. Aenean interdum lobortis nisi, in accumsan augue posuere vitae.</p>
@@ -3144,21 +3146,21 @@
 <p>まあいいんじゃないですか。可読性あるよ。</p>
 <h1>あれこれの画像のテスト</h1>
 <p>というわけで、画像を表示してみよう。まずは横幅50%での表示。：</p>
-<figure>
-<img src="../media/internet-is-broken.jpg" style="width:50.0%" alt="インターネットが壊れている様子 " />
-<figcaption aria-hidden="true">インターネットが壊れている様子<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a><br />
+<figure width="50%">
+<img src="../media/internet-is-broken.jpg" />
+<figcaption>インターネットが壊れている様子<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a><br />
 </figcaption>
 </figure>
 <p>どうでしょう。ちゃんと表示できてる。いいね。次は横幅100%での表示：</p>
 <figure>
-<img src="../media/internet-is-broken.jpg" alt="インターネットが壊れている様子 " />
-<figcaption aria-hidden="true">インターネットが壊れている様子<br />
+<img src="../media/internet-is-broken.jpg" />
+<figcaption>インターネットが壊れている様子<br />
 </figcaption>
 </figure>
 <p>拡大すると勢いが増してよい。よほどひどく壊れているのであろう。……サイズが足りていない画像はどう表示するべきだろうか。左揃えだろうか、それとも中央揃えだろうか。自信ありげな表情に登場してもらう：</p>
-<figure>
-<img src="../media/atri-confidence.png" width="500" alt="自信ありげな表情の一例 " />
-<figcaption aria-hidden="true">自信ありげな表情の一例<br />
+<figure width="500px">
+<img src="../media/atri-confidence.png" />
+<figcaption>自信ありげな表情の一例<br />
 </figcaption>
 </figure>
 <p>ふつうに表示できるかな？いける。まあ左揃えか。それにしてもいい表情だ。かくありたいものです。</p>
@@ -3203,12 +3205,12 @@
 \end{prooftree}
 \]</span></p>
 <p>特に変なことをしなくても普通に書けた。いいね。あと、いちど特定箇所でrequireしてしまえば、それ以降は同じパッケージをrequireする必要はないらしい。正気である。というかエラーこっちのほうが追いやすいまであるよな、これ。</p>
-<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1" role="doc-endnote"><p>フロントウイング・枕, 『<a href="https://atri-mdm.com/">ATRI -My Dear Moments-</a>』, ANIPLEX.EXE, 2020.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2" role="doc-endnote"><p>Virginia Woolf, "<a href="http://gutenberg.net.au/ebooks03/0301251h.html#e26">How Should One Read a Book?</a>", "The Common Reader", Project Gutenberg, 1925.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3" role="doc-endnote"><p>A-1 Pictures, 『<a href="https://kaguya.love/1st/">かぐや様は告らせたい 〜天才たちの恋愛頭脳戦〜</a>』, かぐや様は告らせたい製作委員会, 2019, 11話.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>フロントウイング・枕, 『<a href="https://atri-mdm.com/">ATRI -My Dear Moments-</a>』, ANIPLEX.EXE, 2020.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Virginia Woolf, "<a href="http://gutenberg.net.au/ebooks03/0301251h.html#e26">How Should One Read a Book?</a>", "The Common Reader", Project Gutenberg, 1925.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>A-1 Pictures, 『<a href="https://kaguya.love/1st/">かぐや様は告らせたい 〜天才たちの恋愛頭脳戦〜</a>』, かぐや様は告らせたい製作委員会, 2019, 11話.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section>
 ]]></summary>

@@ -1200,14 +1200,14 @@
 <p>Anyway, the point here is that the compiler polarizes an input by a user. From this perspective, a program doesn't have polarity at first, and it is neutral in that sense. What a user writes is a neutral proof term. So, just like we write text in a text file and set its extension to be ".txt", I chose to set the extension of a file that write a neutral term ".neut", and also went with using it as the name of the language. That's the whole story.</p>
 <h2>Afterword</h2>
 <p>GG.</p>
-<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1" role="doc-endnote"><p>When trying to recover the expressivity of intuitionistic logic starting from linear logic, the first approach that one comes up with would be to use the famous exponential modality <code>!</code>. This approach, however, doesn't seem to work well. Consider adding the modality to the system, and admitting the weakening/contraction operation for the propositions with the modality (that is, the propositions of the form <code>!A</code>). In this situation, the modified system essentially contains the intuitionistic logic as a fragment — a fragment in which all the propositions are of the form <code>!A</code>. This makes us go back to the starting point: "How can we manage memory in a system based on the intuitionistic logic?"<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2" role="doc-endnote"><p>A question can be posed here: What will happen when a type contains free variables? The short answer is that this sort of situation is handled by the generalized concept of a free variable. That is, the concept is generalized so that free variables in a type of a term are also regarded as free variables of the term. For example, consider the following term:</p>
+<li id="fn1"><p>When trying to recover the expressivity of intuitionistic logic starting from linear logic, the first approach that one comes up with would be to use the famous exponential modality <code>!</code>. This approach, however, doesn't seem to work well. Consider adding the modality to the system, and admitting the weakening/contraction operation for the propositions with the modality (that is, the propositions of the form <code>!A</code>). In this situation, the modified system essentially contains the intuitionistic logic as a fragment — a fragment in which all the propositions are of the form <code>!A</code>. This makes us go back to the starting point: "How can we manage memory in a system based on the intuitionistic logic?"<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>A question can be posed here: What will happen when a type contains free variables? The short answer is that this sort of situation is handled by the generalized concept of a free variable. That is, the concept is generalized so that free variables in a type of a term are also regarded as free variables of the term. For example, consider the following term:</p>
 <div class="sourceCode" id="cb27"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>λ (A : Type). λ (x : A -&gt; int). (x, 100)</span></code></pre></div>
 <p>Normally, the free variable of <code>(x, 100)</code> is considered to be simply <code>x</code>. With our generalization, however, since the type of <code>x</code> (i.e. <code>A -&gt; int</code>) contains <code>A</code> as its free variable, this <code>A</code> is also counted as a free variable. Also, since the type of <code>A</code> (i.e. <code>Type</code>) doesn't contain any free variables, this "tracing" operation ends here, with the result that the free variables of <code>(x, 100)</code> is <code>A, x</code>. In this way, we construct a "closed chain" of all the free variables of a term. We then put it at the first element of a generalized closure so that we can copy the closure later.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3" role="doc-endnote"><p>This extension of closure conversion is essentially just an existential quantification. Our familiar existential quantification starts from a statement with free variable(s) like <code>x + 1 = 0</code>, and then create a proposition like <code>exists (x : int). x + 1 = 0</code>, anonymizing the variable <code>x</code>. What the generalized closure conversion does is essentially the same; The type of the closure</p>
+<li id="fn3"><p>This extension of closure conversion is essentially just an existential quantification. Our familiar existential quantification starts from a statement with free variable(s) like <code>x + 1 = 0</code>, and then create a proposition like <code>exists (x : int). x + 1 = 0</code>, anonymizing the variable <code>x</code>. What the generalized closure conversion does is essentially the same; The type of the closure</p>
 <div class="sourceCode" id="cb28"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>({the set of free variables},</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a> λ (the original arguments, env).</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>   let (the free variables) := env in</span>
@@ -1218,9 +1218,9 @@
 <div class="sourceCode" id="cb30"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>Sigma (A : Type). A * {the type of the closed function}</span></code></pre></div>
 <p>The point here is that the <code>A1 * ... * An</code> is lowered to the term from the type.</p>
 <p>Incidentally, this 3-element representation of a closure is not new. Indeed, I was told in <a href="https://github.com/u2zv1wx/neut/issues/1">a GitHub issue</a> that there exists <a href="https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf">a work</a> that does a similar (the same?) thing. Also, with a quick search, I found <a href="https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf">a work in 1996 that does a similar thing</a>. Thus I emphasize here that I don't claim any originality on this generalization of closure conversion.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4" role="doc-endnote"><p>The actual compiler also uses GC so that it can make its output as efficient as possible. I think this can be understood as an optimization, though.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5" role="doc-endnote"><p>The content here is mainly based on <a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">this paper</a>, except for the last sketchy part.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6" role="doc-endnote"><p>More precisely, the operation of proving the conclusion of an elimination rule using the premises of the introduction rule and the additional premises of the elimination rule. Let's take the elimination rule of "<span class="math inline">\( \to \)</span>" for example:</p>
+<li id="fn4"><p>The actual compiler also uses GC so that it can make its output as efficient as possible. I think this can be understood as an optimization, though.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>The content here is mainly based on <a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">this paper</a>, except for the last sketchy part.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>More precisely, the operation of proving the conclusion of an elimination rule using the premises of the introduction rule and the additional premises of the elimination rule. Let's take the elimination rule of "<span class="math inline">\( \to \)</span>" for example:</p>
 <p><span class="math display">\[
 \begin{prooftree}
   \AxiomC{\( \Gamma \vdash A \to B \)}
@@ -1230,8 +1230,8 @@
 \end{prooftree}
 \]</span></p>
 <p>The elimination rule has <span class="math inline">\( A \to B \)</span> and <span class="math inline">\( A \)</span> as its premises. "The additional premises of the elimination rule" is the <span class="math inline">\( A \)</span> here. The example of "<span class="math inline">\( \land \)</span>" is a case in which we have 0 additional premises.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7" role="doc-endnote"><p>I found an answer on Stack Exchange saying that <a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">they correspond to the triangle identities of an adjunction</a>.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8" role="doc-endnote"><p>What will happen when a type contains side effects? There can be at least two responses to this situation:</p>
+<li id="fn7"><p>I found an answer on Stack Exchange saying that <a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">they correspond to the triangle identities of an adjunction</a>.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>What will happen when a type contains side effects? There can be at least two responses to this situation:</p>
 <ol>
 <li>To reject such a term at the type checking stage by making the language pure<br />
 </li>
@@ -1246,6 +1246,8 @@
         <footer>
             <p>
                 <span class="metadata">
+                    <a href="https://bsky.app/profile/vekatze.bsky.social">bluesky</a>
+                    /
                     <a href="https://twitter.com/ricotie">twitter</a>
                     /
                     <a href="https://github.com/vekatze">github</a>

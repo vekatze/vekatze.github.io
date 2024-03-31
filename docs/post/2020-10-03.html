@@ -1232,15 +1232,15 @@
 <p>なんにせよ、ポイントは、コンパイルの過程においてユーザの入力がpositiveな断片とnegativeな断片とに極化されるというところである。逆に言えば、ユーザが書いたプログラムにはまだ極性が入っておらず、そのかぎりにおいてneutralである。ユーザがソースコードに書くのはneutralな証明項である。というわけで、ちょうどテキストファイルに書かれるのがテキストで、その拡張子が ".txt" となるように、neutral termを書くファイルの拡張子は ".neut" とすることにし、これをそのまま言語の名前として用いることにしてみた。それだけの話でした。</p>
 <h2>跋</h2>
 <p>対ありでした〜</p>
-<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1" role="doc-endnote"><p>もしかすると、この制限はなんだか突然どこからともなく降ってきた恣意的なものに見えるかもしれない。が、これは実際には直観主義論理を考えるかわりに線形論理で考えてみるという「よくある」分析に沿ったものとなっている。こういう分析について書いてある文献としては照井先生の<a href="http://www.kurims.kyoto-u.ac.jp/~terui/birth.pdf">これ</a>が個人的におすすめ。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2" role="doc-endnote"><p>ややテクニカルな注釈を添えておく。線形論理からスタートして直観主義論理の表現能力を得ようと思ったなら、まず考えつくのはexponentialの様相を使うことだろうが、こちらの方針ではうまくメモリを静的に管理することができない（と思う）。というのは、S4の様相と同様の仕方でこのexponentialの様相を入れ、さらにその様相をもつもの（つまり <code>!A</code> という形の型を持つもの）に対してweakening / contractionを認めたとき、当該の論理体系はけっきょく <code>!A</code> という形の型だけが出現するようなフラグメントとして実質的に直観主義論理をそのまま含むことになってしまうからである。最初の「直観主義論理ベースな計算体系のメモリってどうやって管理するの？」の問題に戻ってきてしまう。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3" role="doc-endnote"><p>あるいは、ここで次のような疑問を抱くかもしれない。つまり、型のなかに自由変数が含まれていたらどうするのか、という疑問である。結論から言うと、こうした状況には自由変数の概念を拡張することによって対応する。つまり、自由変数の型の中に含まれる自由変数もまた、もとのtermの自由変数として数え入れるのである。たとえば、</p>
+<li id="fn1"><p>もしかすると、この制限はなんだか突然どこからともなく降ってきた恣意的なものに見えるかもしれない。が、これは実際には直観主義論理を考えるかわりに線形論理で考えてみるという「よくある」分析に沿ったものとなっている。こういう分析について書いてある文献としては照井先生の<a href="http://www.kurims.kyoto-u.ac.jp/~terui/birth.pdf">これ</a>が個人的におすすめ。<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>ややテクニカルな注釈を添えておく。線形論理からスタートして直観主義論理の表現能力を得ようと思ったなら、まず考えつくのはexponentialの様相を使うことだろうが、こちらの方針ではうまくメモリを静的に管理することができない（と思う）。というのは、S4の様相と同様の仕方でこのexponentialの様相を入れ、さらにその様相をもつもの（つまり <code>!A</code> という形の型を持つもの）に対してweakening / contractionを認めたとき、当該の論理体系はけっきょく <code>!A</code> という形の型だけが出現するようなフラグメントとして実質的に直観主義論理をそのまま含むことになってしまうからである。最初の「直観主義論理ベースな計算体系のメモリってどうやって管理するの？」の問題に戻ってきてしまう。<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>あるいは、ここで次のような疑問を抱くかもしれない。つまり、型のなかに自由変数が含まれていたらどうするのか、という疑問である。結論から言うと、こうした状況には自由変数の概念を拡張することによって対応する。つまり、自由変数の型の中に含まれる自由変数もまた、もとのtermの自由変数として数え入れるのである。たとえば、</p>
 <div class="sourceCode" id="cb27"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>λ (A : Type). λ (x : A -&gt; int). (x, 100)</span></code></pre></div>
 <p>のようなtermがあったとする。このとき、 <code>(x, 100)</code> の自由変数は、普通はたんに <code>x</code> だけであるとされる。が、ここでは、 <code>x</code> の型であるところの <code>A -&gt; int</code> が自由変数として <code>A</code> を含んでいるので、この <code>A</code> もまた自由変数として数え入れられることになる。他方、 <code>A</code> の型であるところの <code>Type</code> には自由変数は含まれないので、けっきょく、 <code>(x, 100)</code> の自由変数は <code>A, x</code> である、となる。このようにすることで、自由変数をコピーするための型の情報がすべてクロージャの第1成分に入ってくることになる。これによってクロージャがうまくコピーできるようになる。<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4" role="doc-endnote"><p>クロージャ変換のこの3要素への拡張は本質的にはただの存在量化である。親しみ深い存在量化は、 <code>x + 1 = 0</code> のような自由変数をもった主張から始めて、ここから <code>exists (x : Integer). x + 1 = 0</code> のような命題をつくり、いわば変数 <code>x</code> の部分を匿名化するものであった。上でやっているのも同じことで、つまり、もともとクロージャ</p>
+<li id="fn4"><p>クロージャ変換のこの3要素への拡張は本質的にはただの存在量化である。親しみ深い存在量化は、 <code>x + 1 = 0</code> のような自由変数をもった主張から始めて、ここから <code>exists (x : Integer). x + 1 = 0</code> のような命題をつくり、いわば変数 <code>x</code> の部分を匿名化するものであった。上でやっているのも同じことで、つまり、もともとクロージャ</p>
 <div class="sourceCode" id="cb28"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>({自由変数のあつまり},</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a> λ (もとの引数, env).</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>   let (自由変数だったものたちの名前) := env in</span>
@@ -1251,9 +1251,9 @@
 <div class="sourceCode" id="cb30"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>Sigma (A : Type). A * {...}</span></code></pre></div>
 <p>としているのがここでの変換である。この変換によって、もともと型のほうに入っていた <code>(A1, ..., An)</code> の情報がクロージャの第1成分というterm側に降りてきているところがポイントである。</p>
 <p>ところで、このような、クロージャを3成分に拡張する手法は特に新しいものではないらしい。実際、これが本題というわけではないが、<a href="https://github.com/u2zv1wx/neut/issues/1">githubリポジトリのissue</a>で<a href="https://www.ccs.neu.edu/home/amal/papers/closconvcc.pdf">紹介された論文</a>でも同じようなことをやっているとのことであり（まだ読んでいないが）、また簡単に調べてみただけでも、<a href="https://sv.c.titech.ac.jp/minamide/papers/popl96.pdf">1996年時点ですでに似た話がある</a>ように見える。というわけで、いろいろ困ったことになるのは避けたいので、クロージャのこの3要素による変換について、本稿は特にこれといってオリジナリティを主張しない。<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5" role="doc-endnote"><p>当該のコンパイラにおいては、実際には既存コードをなるべく効率的にコンパイルするべくGCが同時に利用されていたりする。が、これはあくまでひとつの最適化であると理解しておけばよかろう。<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6" role="doc-endnote"><p>ここでの話は、最後の与太話を除いて<a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">こちらの論文</a>をベースにしたものになっている。<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7" role="doc-endnote"><p>もうすこし正確には、除去則の結論を、導入則の前提、および除去則の追加の仮定から証明するという操作である。つまり、たとえば <span class="math inline">\( \to \)</span> の除去則では</p>
+<li id="fn5"><p>当該のコンパイラにおいては、実際には既存コードをなるべく効率的にコンパイルするべくGCが同時に利用されていたりする。が、これはあくまでひとつの最適化であると理解しておけばよかろう。<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>ここでの話は、最後の与太話を除いて<a href="https://www.cs.cmu.edu/~fp/papers/mscs00.pdf">こちらの論文</a>をベースにしたものになっている。<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>もうすこし正確には、除去則の結論を、導入則の前提、および除去則の追加の仮定から証明するという操作である。つまり、たとえば <span class="math inline">\( \to \)</span> の除去則では</p>
 <p><span class="math display">\[
 \begin{prooftree}
   \AxiomC{\( \Gamma \vdash A \to B \)}
@@ -1263,8 +1263,8 @@
 \end{prooftree}
 \]</span></p>
 <p>のように <span class="math inline">\( A \to B \)</span> と <span class="math inline">\( A \)</span> が前提としてとられるが、これでいうところの <span class="math inline">\( A \)</span> が「除去則の追加の仮定」である。「<span class="math inline">\( \land \)</span>」の例ではここが0個になっている。<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8" role="doc-endnote"><p>もっと言うと、<a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">両者は随伴におけるtriangle identitiesのそれぞれに対応している</a>ようである。<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn9" role="doc-endnote"><p>そういえば、型に副作用があったらどうするのか、という疑問がありうる。これについては選択肢は少なくとも2つある：</p>
+<li id="fn8"><p>もっと言うと、<a href="https://math.stackexchange.com/questions/1633210/is-there-a-connection-between-local-soundness-and-completeness-in-proof-theory">両者は随伴におけるtriangle identitiesのそれぞれに対応している</a>ようである。<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn9"><p>そういえば、型に副作用があったらどうするのか、という疑問がありうる。これについては選択肢は少なくとも2つある：</p>
 <ol>
 <li>言語を純粋にしてそもそも副作用が絡んでいるときには型検査を通過しないようにする<br />
 </li>
@@ -1279,6 +1279,8 @@
         <footer>
             <p>
                 <span class="metadata">
+                    <a href="https://bsky.app/profile/vekatze.bsky.social">bluesky</a>
+                    /
                     <a href="https://twitter.com/ricotie">twitter</a>
                     /
                     <a href="https://github.com/vekatze">github</a>
